@@ -1,0 +1,13 @@
+
+.modal-content {
+    background-color: #F8D7DA;
+    border: 2px solid #F1AEB5;
+}
+
+.modal-header {
+    border-color: #F8D7DA;
+}
+
+.modal-footer {
+   border-color: #F1AEB5; 
+}

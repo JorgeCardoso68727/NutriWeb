@@ -1,0 +1,103 @@
+body{
+    background-color: #F6F6EA;
+    color: #333;
+    font-family: sans-serif;
+    margin: 0;
+}
+
+.sidebar {
+    height: 100vh;
+    position: fixed;
+    padding: 20px;
+    width: 280px;
+    border-right: 1px solid rgba(0,0,0,0.05);
+}
+
+.sidebar-logo {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-link {
+    color: #000;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+}
+
+.nav-link i {
+    font-size: 1.5rem;
+    color: #000;
+}
+
+.nav-link:hover {
+    color: #7CC665;
+}
+
+/* --- Feed Central --- */
+.main-content {
+    margin-left: 280px;
+    width: calc(100% - 40%);
+    padding-top: 40px;
+}
+
+.section-title {
+    font-weight: 800;
+    margin-bottom: 30px;
+    font-size: 1.2rem;
+    color: #195321;
+}
+
+.post-card {
+    background-color: #D9D9D9;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 30px;
+    max-width: 550px;
+    height: auto;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.avatar-circle {
+    width: 30px;
+    height: 30px;
+    background: #000;
+    border-radius: 50%;
+}
+
+.img-placeholder {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background-color: #F6F6EA;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.post-footer {
+    margin-top: 15px;
+    border-top: 1px solid #999;
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+

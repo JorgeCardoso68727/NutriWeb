@@ -1,0 +1,74 @@
+body {
+    margin: 0;
+    background: #f6f6ea;
+    font-family: Arial, sans-serif;
+    background-image: url("../Img/Index.png");
+    background-size: cover;
+    background-position: top;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    position: relative;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.landing-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}
+
+.top-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 24px;
+}
+
+.top-actions a {
+    text-decoration: none;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+    transition: transform .15s ease;
+}
+
+.top-actions a:hover {
+    transform: translateY(-1px);
+}
+
+.btn-register {
+    background: #248331;
+    color: #fff;
+}
+
+.btn-login {
+    background: #ffffff;
+    color: #248331;
+    border: 2px solid #248331;
+}
+
+.hero {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+}
+
+.hero img {
+    width: min(900px, 92vw);
+    max-height: 72vh;
+    object-fit: cover;
+    border-radius: 18px;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+}

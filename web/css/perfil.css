@@ -1,0 +1,94 @@
+        body{
+            background-color: #F6F6EA;
+            color: #333;
+            font-family: sans-serif;
+            margin: 0;
+        }
+
+        .nav-link {
+            color: #000;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+        }
+
+        .nav-link i {
+            font-size: 1.5rem;
+            color: #000;
+        }
+
+        .nav-link:hover {
+            color: #7CC665;
+        }
+
+        /* Conteúdo Principal */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            margin-left: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .submain{
+            max-width: 900px;
+        }
+
+        .profile-avatar {
+            width: 150px; 
+            height: 150px; 
+            border-radius: 50%; 
+            object-fit: cover;
+        }
+
+
+        .botao-perfil {
+            background-color: #238230;
+            color: #fff;
+            border: none;
+            transition: background 0.3s;
+        }
+
+        .botao-perfil:hover {
+            color : #fff;
+            background-color: #1e6b1e;
+        }
+
+        .simbolo {
+            cursor: pointer;
+        }
+
+        .menu-top-right {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            font-size: 2.5rem;
+            cursor: pointer;
+            color: #195321;
+        }
+
+        .menu-top-right:hover {
+            color: #1e6b1e;
+        }
+
+        .sidebar-right {
+            height: 100vh;
+            position: fixed;
+            right: -280px;
+            top: 0;
+            width: 280px;
+            padding: 40px 25px;
+            border-left: 1px solid rgba(0, 0, 0, 0.05);
+            background-color: #F6F6EA;
+            z-index: 1000;
+            transition: right 0.3s ease-in-out;
+        }
+
+        .sidebar-right.active {
+            right: 0;
+        }

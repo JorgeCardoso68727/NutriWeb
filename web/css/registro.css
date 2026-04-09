@@ -1,0 +1,113 @@
+.body-Login-register {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #F6F6EA;
+    font-family: sans-serif;
+    color: #333;
+}
+
+.register-container {
+    width: 100%;
+    max-width: 950px;
+}
+
+.logo-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.btn-register {
+    border-radius: 15px;
+    background-color: #238230; 
+    border: none;
+    padding: 12px;
+    font-weight: bolder;
+    font-size: 1.2rem;
+    color: white;
+    width: 100%;
+    margin-top: 10px;
+    transition: background 0.3s;
+}
+
+.btn-register:hover {
+    background-color: #1e6b1e;
+    color: white;
+}
+
+.login-link {
+    text-align: start;
+    margin-top: 15px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+.login-link a {
+    color: #6200ea;
+    text-decoration: underline;
+}
+
+.logo-img-g {
+    display: block;
+    margin: 0 auto 1.5rem auto;
+    margin-bottom: -1.5rem;
+    width: 20rem;
+    height: auto;
+}
+
+.logo-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.brand-title {
+    font-family: sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 1.1;
+    text-align: center;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    color: #195321;
+}
+
+.form-control:focus,
+.form-control {
+    border-radius: 15px;
+    padding: 12px 20px;
+    border-color: #7CC665;
+    background-color: #F6F6EA;
+    box-shadow: none;
+}
+
+.password-group .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: 0;
+}
+
+.password-group .input-group-text {
+    border-radius: 15px;
+    background-color: #F6F6EA;
+    cursor: pointer;
+    color: #6c757d;
+    border-color: #7CC665;
+}
+
+.password-group .form-control, 
+.password-group .input-group-text {
+    box-shadow: none;
+    border-color: #7CC665;
+    background-color: #F6F6EA;
+}
+
+.password-group .input-group-text {
+    border-top-right-radius: 15px !important;
+    border-bottom-right-radius: 15px !important;
+}

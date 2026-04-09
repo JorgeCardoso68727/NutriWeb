@@ -1,0 +1,84 @@
+ body{
+            background-color: #F6F6EA;
+            color: #333;
+            font-family: sans-serif;
+            margin: 0;
+        }
+        
+.pedido-nutri-page {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+}
+
+.pedido-nutri-card {
+    width: 100%;
+    max-width: 400px;
+    background-color: #f6f6ea;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 16px;
+    padding: 28px 24px;
+}
+
+.pedido-nutri-card-admin {
+    max-width: 860px;
+}
+
+.pedido-nutri-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.pedido-nutri-title {
+    font-weight: 700;
+    margin: 0;
+}
+
+.pedido-nutri-actions {
+    color: #1f1f1f;
+}
+
+.pedido-nutri-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.pedido-nutri-download {
+    text-align: center;
+    margin-top: 52px;
+}
+
+.pedido-nutri-note {
+    font-size: 0.85rem;
+    color: #6d6d6d;
+    margin-bottom: 20px;
+}
+
+.pedido-nutri-download-link {
+    display: inline-flex;
+    color: #222;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.pedido-nutri-download-link:hover {
+    color: #7cc665;
+}
+
+.pedido-nutri-table th {
+    font-size: 0.85rem;
+}
+
+.pedido-nutri-actions-cell {
+    white-space: nowrap;
+}
+
+.pedido-nutri-actions-cell form {
+    margin-right: 6px;
+}

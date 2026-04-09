@@ -1,0 +1,46 @@
+
+.profile-img-edit {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+}
+
+.edit-card {
+    background-color: #efefe3; 
+    padding: 15px 20px;
+    border-radius: 12px;
+}
+
+.custom-input:focus {
+    border-color: #7CC665;
+    box-shadow: 0 0 0 0.25rem rgba(124, 198, 101, 0.15);
+    outline: none;
+}
+
+/* --- Toggles e Botões --- */
+.custom-switch {
+    width: 3em !important;
+    height: 1.5em !important;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: #7CC665; 
+    border-color: #7CC665;
+}
+
+.btn-save {
+    background-color: #238230;
+    color: #fff;
+    border: none;
+    transition: background-color 0.3s, transform 0.1s;
+}
+
+.btn-save:hover {
+    background-color: #1e6b1e;
+    color: #fff;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
