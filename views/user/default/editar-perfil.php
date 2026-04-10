@@ -10,7 +10,7 @@ $this->title = 'Nutriweb - Editar perfil';
 
 $avatar = !empty($profile->Foto)
     ? Url::to('@web/' . ltrim($profile->Foto, '/'))
-    : Url::to('@web/Img/Nutriweb Logo.png');
+    : Url::to('@web/Img/default.jpeg');
 
 $this->title = 'NutriWeb - Editar Perfil';
 ?>

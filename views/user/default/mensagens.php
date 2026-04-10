@@ -21,7 +21,7 @@ if ($selectedUser !== null) {
     $selectedFullName = trim($selectedFirstName . ' ' . $selectedLastName);
     $selectedDisplayName = $selectedFullName !== '' ? $selectedFullName : ($selectedUsername !== '' ? $selectedUsername : 'Utilizador');
     $selectedPhotoPath = trim((string) ($selectedUser['profile_photo'] ?? ''));
-    $selectedPhotoUrl = $selectedPhotoPath !== '' ? Url::to('@web/' . ltrim($selectedPhotoPath, '/')) : Url::to('@web/Img/Nutriweb Logo.png');
+    $selectedPhotoUrl = $selectedPhotoPath !== '' ? Url::to('@web/' . ltrim($selectedPhotoPath, '/')) : Url::to('@web/Img/default.jpeg');
     $updatesUrl = Url::to(['mensagens-updates', 'with' => $selectedUsername]);
 }
 ?>
@@ -55,7 +55,7 @@ if ($selectedUser !== null) {
                             $fullName = trim($firstName . ' ' . $lastName);
                             $displayName = $fullName !== '' ? $fullName : ($username !== '' ? $username : 'Utilizador');
                             $photoPath = trim((string) ($user['profile_photo'] ?? ''));
-                            $photoUrl = $photoPath !== '' ? Url::to('@web/' . ltrim($photoPath, '/')) : Url::to('@web/Img/Nutriweb Logo.png');
+                            $photoUrl = $photoPath !== '' ? Url::to('@web/' . ltrim($photoPath, '/')) : Url::to('@web/Img/default.jpeg');
                             ?>
                             <a class="conversation-item" href="<?= Html::encode(Url::to(['mensagens', 'with' => $username])) ?>">
                                 <img class="avatar-circle" src="<?= Html::encode($photoUrl) ?>" alt="Foto de <?= Html::encode($displayName) ?>">
@@ -82,7 +82,7 @@ if ($selectedUser !== null) {
                         $fullName = trim($firstName . ' ' . $lastName);
                         $displayName = $fullName !== '' ? $fullName : ($username !== '' ? $username : 'Utilizador');
                         $photoPath = trim((string) ($user['profile_photo'] ?? ''));
-                        $photoUrl = $photoPath !== '' ? Url::to('@web/' . ltrim($photoPath, '/')) : Url::to('@web/Img/Nutriweb Logo.png');
+                        $photoUrl = $photoPath !== '' ? Url::to('@web/' . ltrim($photoPath, '/')) : Url::to('@web/Img/default.jpeg');
                         $isActive = $selectedUser !== null && (int) $selectedUser['id'] === $userId;
                         $unreadCount = (int) ($conversationMetaByUserId[$userId]['unread_count'] ?? 0);
                         $lastMessageAt = trim((string) ($conversationMetaByUserId[$userId]['last_message_at'] ?? ''));

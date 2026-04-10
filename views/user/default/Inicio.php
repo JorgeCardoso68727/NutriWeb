@@ -35,7 +35,7 @@ $this->title = 'Nutriweb - Início';
                 $avatarPath = trim((string) ($post['profile_photo'] ?? ''));
                 $avatarUrl = $avatarPath !== ''
                     ? Url::to('@web/' . ltrim($avatarPath, '/'))
-                    : Url::to('@web/Img/Nutriweb Logo.png');
+                    : Url::to('@web/Img/default.jpeg');
 
                 $username = trim((string) ($post['username'] ?? ''));
                 $displayName = $username !== '' ? $username : 'Utilizador';
@@ -113,7 +113,7 @@ $this->title = 'Nutriweb - Início';
                     $photoPath = trim((string) ($nutritionist['profile_photo'] ?? ''));
                     $photoUrl = $photoPath !== ''
                         ? Url::to('@web/' . ltrim($photoPath, '/'))
-                        : Url::to('@web/Img/Nutriweb Logo.png');
+                        : Url::to('@web/Img/default.jpeg');
 
                     $firstName = trim((string) ($nutritionist['Frist_Name'] ?? ''));
                     $lastName = trim((string) ($nutritionist['Last_Name'] ?? ''));

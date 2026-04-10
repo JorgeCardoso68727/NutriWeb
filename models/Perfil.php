@@ -76,7 +76,7 @@ class Perfil extends \yii\db\ActiveRecord
             $this->Bio = '';
         }
         if ($this->isNewRecord && !$this->Foto) {
-            $this->Foto = 'img/default.jpeg';
+            $this->Foto = 'Img/default.jpeg';
         }
         return parent::beforeSave($insert);
     }

@@ -82,11 +82,9 @@ class MyDefaultController extends Controller
             return $this->render('index', ['actions' => $actions]);
         }
 
-        if (Yii::$app->user->isGuest) {
-            return $this->redirect(['/user/login']);
-        }
-
-        return $this->redirect(['/user/account']);
+        return $this->render('index', [
+            'isGuest' => Yii::$app->user->isGuest,
+        ]);
     }
 
     /**

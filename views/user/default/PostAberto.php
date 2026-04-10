@@ -28,7 +28,7 @@ $imageUrl = $imagePath !== ''
 $avatarPath = trim((string) ($post['profile_photo'] ?? ''));
 $avatarUrl = $avatarPath !== ''
     ? Url::to('@web/' . ltrim($avatarPath, '/'))
-    : Url::to('@web/Img/Nutriweb Logo.png');
+    : Url::to('@web/Img/default.jpeg');
 
 $username = trim((string) ($post['username'] ?? ''));
 $displayName = $username !== '' ? $username : 'Utilizador';

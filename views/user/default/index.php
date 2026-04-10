@@ -19,8 +19,13 @@ $this->beginPage();
 
 <main class="landing-page">
 	<div class="top-actions">
-		<a class="btn-register" href="<?= Url::to(['/user/register']) ?>">Registrar</a>
-		<a class="btn-login" href="<?= Url::to(['/user/login']) ?>">Login</a>
+		<?php if (!empty($isGuest)): ?>
+			<a class="btn-register" href="<?= Url::to(['/user/register']) ?>">Registrar</a>
+			<a class="btn-login" href="<?= Url::to(['/user/login']) ?>">Login</a>
+		<?php else: ?>
+			<a class="btn-register" href="<?= Url::to(['/user/inicio']) ?>">Ir para Início</a>
+			<a class="btn-login" href="<?= Url::to(['/user/logout']) ?>">Sair</a>
+		<?php endif; ?>
 	</div>
 
 </main>

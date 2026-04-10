@@ -53,7 +53,7 @@ $this->title = 'Nutriweb - Procurar';
                         $photoPath = trim((string) ($user['profile_photo'] ?? ''));
                         $photoUrl = $photoPath !== ''
                             ? Url::to('@web/' . ltrim($photoPath, '/'))
-                            : Url::to('@web/Img/Nutriweb Logo.png');
+                            : Url::to('@web/Img/default.jpeg');
 
                         $firstName = trim((string) ($user['Frist_Name'] ?? ''));
                         $lastName = trim((string) ($user['Last_Name'] ?? ''));

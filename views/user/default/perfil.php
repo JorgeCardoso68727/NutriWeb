@@ -22,7 +22,7 @@ $fullName = trim(($profile->Frist_Name ?? '') . ' ' . ($profile->Last_Name ?? ''
 $bio = $profile->Bio ?? '';
 $avatar = !empty($profile->Foto)
     ? Url::to('@web/' . ltrim($profile->Foto, '/'))
-    : Url::to('@web/Img/Nutriweb Logo.png');
+    : Url::to('@web/Img/default.jpeg');
 $this->title = 'Nutriweb - '. $username;
 ?>
 
