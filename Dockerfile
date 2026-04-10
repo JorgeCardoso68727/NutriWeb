@@ -1,11 +1,5 @@
 FROM php:8.0-apache
 
-# Resolver conflito de MPMs
-RUN a2dismod mpm_prefork || true
-RUN a2dismod mpm_worker || true
-RUN a2dismod mpm_event || true
-RUN a2enmod mpm_event
-
 # Ativar rewrite
 RUN a2enmod rewrite
 
