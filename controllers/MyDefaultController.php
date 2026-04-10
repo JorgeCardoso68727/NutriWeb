@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use app\models\Post;
 use app\models\BadgePedido;
+use app\models\Agua;
 use app\models\Mensagem;
 use app\models\Seguidor;
 use app\models\User;
@@ -69,6 +70,59 @@ class MyDefaultController extends Controller
                 ],
             ],
         ];
+    }
+
+    /**
+     * Display index - debug page, login page, or account page
+     */
+    public function actionIndex()
+    {
+        if (defined('YII_DEBUG') && YII_DEBUG) {
+            $actions = $this->module->getActions();
+            return $this->render('index', ['actions' => $actions]);
+        }
+
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['/user/login']);
+        }
+
+        return $this->redirect(['/user/account']);
+    }
+
+    /**
+     * Display login page
+     */
+    public function actionLogin()
+    {
+        /** @var \amnah\yii2\user\models\forms\LoginForm $model */
+        $model = $this->module->model('LoginForm');
+
+        $post = Yii::$app->request->post();
+        if ($model->load($post) && $model->validate()) {
+            $returnUrl = $this->performLogin($model->getUser(), $model->rememberMe);
+            return $this->redirect($returnUrl);
+        }
+
+        return $this->render('login', compact('model'));
+    }
+
+    /**
+     * Login/register via email
+     */
+    public function actionLoginEmail()
+    {
+        /** @var \amnah\yii2\user\models\forms\LoginEmailForm $loginEmailForm */
+        $loginEmailForm = $this->module->model('LoginEmailForm');
+
+        $post = Yii::$app->request->post();
+        if ($loginEmailForm->load($post) && $loginEmailForm->sendEmail()) {
+            $user = $loginEmailForm->getUser();
+            $message = $user ? 'Login link sent' : 'Registration link sent';
+            $message .= ' - Please check your email';
+            Yii::$app->session->setFlash('Login-success', Yii::t('user', $message));
+        }
+
+        return $this->render('loginEmail', compact('loginEmailForm'));
     }
 
     /**
@@ -1303,7 +1357,57 @@ class MyDefaultController extends Controller
 
     public function actionGotinha()
     {
-        return $this->render('gotinha');
+        $currentUserId = (int) Yii::$app->user->id;
+        $dailyGoalMl = 2000;
+
+        if (Yii::$app->request->isPost) {
+            $amountMl = (int) Yii::$app->request->post('quantidade_ml', 0);
+
+            if ($amountMl > 0) {
+                $agua = new Agua();
+                $agua->quantidade_ml = $amountMl;
+                $agua->user_id = $currentUserId;
+                $agua->data_registo = date('Y-m-d H:i:s');
+
+                if ($agua->save()) {
+                    Yii::$app->session->setFlash('Agua-success', 'Registo de agua guardado com sucesso.');
+                } else {
+                    Yii::$app->session->setFlash('Agua-error', 'Nao foi possivel guardar o registo de agua.');
+                }
+            } else {
+                Yii::$app->session->setFlash('Agua-error', 'Quantidade invalida.');
+            }
+
+            return $this->redirect(['gotinha']);
+        }
+
+        $todayStart = date('Y-m-d 00:00:00');
+        $todayEnd = date('Y-m-d 23:59:59');
+
+        $todayTotalMl = (int) (new Query())
+            ->from(['a' => 'agua'])
+            ->where([
+                'a.user_id' => $currentUserId,
+            ])
+            ->andWhere(['between', 'a.data_registo', $todayStart, $todayEnd])
+            ->sum('a.quantidade_ml');
+
+        $progressPercent = $dailyGoalMl > 0 ? min(100, (int) round(($todayTotalMl / $dailyGoalMl) * 100)) : 0;
+
+        $recentEntries = (new Query())
+            ->select(['a.id', 'a.quantidade_ml', 'a.data_registo'])
+            ->from(['a' => 'agua'])
+            ->where(['a.user_id' => $currentUserId])
+            ->orderBy(['a.data_registo' => SORT_DESC, 'a.id' => SORT_DESC])
+            ->limit(8)
+            ->all();
+
+        return $this->render('gotinha', [
+            'todayTotalMl' => $todayTotalMl,
+            'dailyGoalMl' => $dailyGoalMl,
+            'progressPercent' => $progressPercent,
+            'recentEntries' => $recentEntries,
+        ]);
     }
 
     public function actionProcurar()

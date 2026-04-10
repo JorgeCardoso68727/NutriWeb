@@ -31,7 +31,6 @@ if ($selectedUser !== null) {
         <aside class="conversations-col">
             <div class="conversations-head">
                 <h5 class="m-0 fw-bold">Conversas</h5>
-                <i class="bi bi-search"></i>
             </div>
 
             <?= Html::beginForm(['mensagens'], 'get', ['class' => 'user-search-form']) ?>
