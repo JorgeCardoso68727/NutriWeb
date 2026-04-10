@@ -1,7 +1,6 @@
-# Imagem base com PHP + Apache
 FROM php:8.2-apache
 
-# Instalar dependências necessárias
+# Instalar dependências
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -12,36 +11,38 @@ RUN apt-get update && apt-get install -y \
     curl \
     && docker-php-ext-install pdo pdo_mysql zip gd
 
-# Ativar mod_rewrite (Yii precisa disto)
+# 🔥 Corrigir erro MPM
+RUN a2dismod mpm_event mpm_worker || true \
+    && a2enmod mpm_prefork
+
+# Ativar mod_rewrite
 RUN a2enmod rewrite
 
-# Instalar Composer
+# Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Diretório da app
 WORKDIR /var/www/html
 
 # Copiar projeto
 COPY . .
 
-# Instalar dependências do Yii2
+# Instalar Yii2
 RUN composer install --no-dev --optimize-autoloader
 
-# 🔥 Criar pastas obrigatórias do Yii2
+# Criar pastas Yii2
 RUN mkdir -p runtime web/assets
 
-# Permissões corretas
+# Permissões
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 runtime web/assets
 
-# Configurar Apache para apontar para /web
+# Apache apontar para /web
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/web|g' /etc/apache2/sites-available/000-default.conf
 
-# Ajustar porta dinâmica do Railway
+# Porta Railway
 RUN sed -i 's/80/${PORT}/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 
-# Expor porta
 EXPOSE 8080
 
-# 🚀 Garantir que as pastas existem em runtime também
+# Start
 CMD mkdir -p /var/www/html/runtime /var/www/html/web/assets && apache2-foreground
