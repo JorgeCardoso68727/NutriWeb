@@ -73,7 +73,11 @@ $this->title = 'Nutriweb - '. $username;
                         <?= $isFollowing ? 'Deixar de seguir' : 'Seguir' ?>
                     </button>
                     <?= Html::endForm() ?>
-                    <button class="btn flex-grow-1 py-2 rounded-3 botao-perfil">Mensagem</button>
+                    <?= Html::a(
+                        'Mensagem',
+                        ['/user/mensagens', 'with' => $username],
+                        ['class' => 'btn flex-grow-1 py-2 rounded-3 botao-perfil']
+                    ) ?>
                 <?php endif; ?>
             </div>
         </div>

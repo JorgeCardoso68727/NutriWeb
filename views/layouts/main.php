@@ -58,7 +58,7 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/x-icon', 'href' => Yii
     </div>
 
     <main id="main" class="flex-shrink-0" role="main">
-        <div class="container">
+        <div class="<?= !empty($this->params['fullWidth']) ? 'container-fluid px-0' : 'container' ?>">
             <?php if (!empty($this->params['breadcrumbs'])): ?>
                 <?= Breadcrumbs::widget(['links' => $this->params['breadcrumbs']]) ?>
             <?php endif ?>

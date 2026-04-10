@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use app\models\Post;
 use app\models\BadgePedido;
+use app\models\Mensagem;
 use app\models\Seguidor;
 use app\models\User;
 use app\models\LoginForm;
@@ -45,7 +46,7 @@ class MyDefaultController extends Controller
                         'roles' => ['?', '@'],
                     ],
                     [
-                        'actions' => ['account', 'perfil', 'editar-perfil', 'resend-change', 'cancel', 'inicio', 'post-aberto', 'remove-post', 'feed', 'mensagens', 'gotinha', 'criarpost', 'toggle-follow', 'toggle-like', 'badge', 'badge-review'],
+                        'actions' => ['account', 'perfil', 'editar-perfil', 'resend-change', 'cancel', 'inicio', 'post-aberto', 'remove-post', 'feed', 'mensagens', 'mensagens-updates', 'gotinha', 'procurar', 'criarpost', 'toggle-follow', 'toggle-like', 'badge', 'badge-review'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -60,6 +61,7 @@ class MyDefaultController extends Controller
                 'class' => VerbFilter::className(),
                 'actions' => [
                     'logout' => ['post'],
+                    'mensagens-updates' => ['get'],
                     'toggle-follow' => ['post'],
                     'toggle-like' => ['post'],
                     'remove-post' => ['post'],
@@ -67,64 +69,6 @@ class MyDefaultController extends Controller
                 ],
             ],
         ];
-    }
-
-    /**
-     * Display index - debug page, login page, or account page
-     */
-    public function actionIndex()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->redirect(['/user/inicio']);
-        }
-
-        if (defined('YII_DEBUG') && YII_DEBUG) {
-            $actions = $this->module->getActions();
-            return $this->render('index', ["actions" => $actions]);
-        } elseif (Yii::$app->user->isGuest) {
-            return $this->redirect(["/user/login"]);
-        } else {
-            return $this->redirect(["/user/account"]);
-        }
-    }
-
-    /**
-     * Display login page
-     */
-    public function actionLogin()
-    {
-        /** @var \app\models\LoginForm $model */
-        $model = new LoginForm();
-
-        // load post data and login
-        $post = Yii::$app->request->post();
-        if ($model->load($post) && $model->validate()) {
-            $this->performLogin($model->getUser(), $model->rememberMe);
-            return $this->redirect(['/user/inicio']);
-        }
-
-        return $this->render('login', compact("model"));
-    }
-
-    /**
-     * Login/register via email
-     */
-    public function actionLoginEmail()
-    {
-        /** @var \amnah\yii2\user\models\forms\LoginEmailForm $loginEmailForm */
-        //$loginEmailForm = $this->module->model("LoginEmailForm");
-        $loginEmailForm = new $loginEmailForm();
-
-        // load post data and validate
-        $post = Yii::$app->request->post();
-        if ($loginEmailForm->load($post) && $loginEmailForm->sendEmail()) {
-            $user = $loginEmailForm->getUser();
-            $message = $user ? "Login link sent" : "Registration link sent";
-            $message .= " - Please check your email";
-            Yii::$app->session->setFlash("Login-success", Yii::t("user", $message));
-        }
-
-        return $this->render("loginEmail", compact("loginEmailForm"));
     }
 
     /**
@@ -959,12 +903,467 @@ class MyDefaultController extends Controller
 
     public function actionMensagens()
     {
-        return $this->render('Mensagens');
+        $currentUserId = (int) Yii::$app->user->id;
+        $withUsername = trim((string) Yii::$app->request->get('with', ''));
+        $userSearchTerm = trim((string) Yii::$app->request->get('u', ''));
+
+        if (Yii::$app->request->isPost) {
+            $isAjaxRequest = Yii::$app->request->isAjax;
+            $targetUserId = (int) Yii::$app->request->post('target_user_id', 0);
+            $messageText = trim((string) Yii::$app->request->post('conteudo', ''));
+
+            if ($targetUserId <= 0 || $targetUserId === $currentUserId) {
+                if ($isAjaxRequest) {
+                    Yii::$app->response->format = Response::FORMAT_JSON;
+                    Yii::$app->response->statusCode = 400;
+                    return ['success' => false, 'message' => 'Destino de mensagem invalido.'];
+                }
+                Yii::$app->session->setFlash('Mensagem-error', 'Destino de mensagem invalido.');
+                return $this->redirect(['mensagens']);
+            }
+
+            if ($messageText === '') {
+                $targetUsername = (string) (new Query())
+                    ->select(['u.username'])
+                    ->from(['u' => 'user'])
+                    ->where(['u.id' => $targetUserId])
+                    ->scalar();
+
+                if ($isAjaxRequest) {
+                    Yii::$app->response->format = Response::FORMAT_JSON;
+                    Yii::$app->response->statusCode = 400;
+                    return ['success' => false, 'message' => 'A mensagem nao pode estar vazia.'];
+                }
+                Yii::$app->session->setFlash('Mensagem-error', 'A mensagem nao pode estar vazia.');
+                return $this->redirect(['mensagens', 'with' => $targetUsername]);
+            }
+
+            $targetExists = (new Query())
+                ->from(['u' => 'user'])
+                ->where(['u.id' => $targetUserId])
+                ->exists();
+            if (!$targetExists) {
+                if ($isAjaxRequest) {
+                    Yii::$app->response->format = Response::FORMAT_JSON;
+                    Yii::$app->response->statusCode = 404;
+                    return ['success' => false, 'message' => 'Utilizador nao encontrado.'];
+                }
+                Yii::$app->session->setFlash('Mensagem-error', 'Utilizador nao encontrado.');
+                return $this->redirect(['mensagens']);
+            }
+
+            $message = new Mensagem();
+            $message->remetente_id = $currentUserId;
+            $message->destinatario_id = $targetUserId;
+            $message->conteudo = $messageText;
+            $message->lida = 0;
+
+            if ($message->save(false)) {
+                $targetUsername = (string) (new Query())
+                    ->select(['u.username'])
+                    ->from(['u' => 'user'])
+                    ->where(['u.id' => $targetUserId])
+                    ->scalar();
+
+                if ($isAjaxRequest) {
+                    Yii::$app->response->format = Response::FORMAT_JSON;
+                    return [
+                        'success' => true,
+                        'with' => $targetUsername,
+                    ];
+                }
+
+                return $this->redirect(['mensagens', 'with' => $targetUsername]);
+            }
+
+            if ($isAjaxRequest) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                Yii::$app->response->statusCode = 500;
+                return ['success' => false, 'message' => 'Nao foi possivel enviar a mensagem.'];
+            }
+
+            Yii::$app->session->setFlash('Mensagem-error', 'Nao foi possivel enviar a mensagem.');
+            return $this->redirect(['mensagens']);
+        }
+
+        $conversationRows = Yii::$app->db->createCommand(
+            'SELECT
+                CASE WHEN m.remetente_id = :uid THEN m.destinatario_id ELSE m.remetente_id END AS other_user_id,
+                MAX(m.data_envio) AS last_message_at,
+                SUM(CASE WHEN m.destinatario_id = :uid AND m.lida = 0 THEN 1 ELSE 0 END) AS unread_count
+             FROM mensagem m
+             WHERE m.remetente_id = :uid OR m.destinatario_id = :uid
+             GROUP BY other_user_id
+             ORDER BY last_message_at DESC',
+            [':uid' => $currentUserId]
+        )->queryAll();
+
+        $conversationUserIds = array_values(array_unique(array_map(static function ($row) {
+            return (int) ($row['other_user_id'] ?? 0);
+        }, $conversationRows)));
+        $conversationUserIds = array_filter($conversationUserIds, static function ($id) {
+            return $id > 0;
+        });
+
+        $conversationMetaByUserId = [];
+        foreach ($conversationRows as $row) {
+            $otherId = (int) ($row['other_user_id'] ?? 0);
+            if ($otherId <= 0) {
+                continue;
+            }
+            $conversationMetaByUserId[$otherId] = [
+                'last_message_at' => (string) ($row['last_message_at'] ?? ''),
+                'last_message_preview' => '',
+                'unread_count' => (int) ($row['unread_count'] ?? 0),
+            ];
+        }
+
+        if (!empty($conversationUserIds)) {
+            foreach ($conversationUserIds as $otherId) {
+                $latestMessage = (new Query())
+                    ->select(['m.conteudo'])
+                    ->from(['m' => 'mensagem'])
+                    ->where([
+                        'or',
+                        ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $otherId]],
+                        ['and', ['m.remetente_id' => $otherId], ['m.destinatario_id' => $currentUserId]],
+                    ])
+                    ->orderBy(['m.data_envio' => SORT_DESC, 'm.id' => SORT_DESC])
+                    ->limit(1)
+                    ->one();
+
+                if ($latestMessage !== false && isset($conversationMetaByUserId[$otherId])) {
+                    $conversationMetaByUserId[$otherId]['last_message_preview'] = trim((string) ($latestMessage['conteudo'] ?? ''));
+                }
+            }
+        }
+
+        $conversationUsers = [];
+        if (!empty($conversationUserIds)) {
+            $conversationUsers = (new Query())
+                ->select([
+                    'u.id',
+                    'u.username',
+                    'pr.Frist_Name',
+                    'pr.Last_Name',
+                    'pr.Foto AS profile_photo',
+                ])
+                ->from(['u' => 'user'])
+                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
+                ->where(['u.id' => $conversationUserIds])
+                ->all();
+
+            usort($conversationUsers, static function ($a, $b) use ($conversationMetaByUserId) {
+                $aTs = (string) ($conversationMetaByUserId[(int) $a['id']]['last_message_at'] ?? '');
+                $bTs = (string) ($conversationMetaByUserId[(int) $b['id']]['last_message_at'] ?? '');
+                return strcmp($bTs, $aTs);
+            });
+        }
+
+        $selectedUser = null;
+        if ($withUsername !== '') {
+            $selectedUser = (new Query())
+                ->select([
+                    'u.id',
+                    'u.username',
+                    'pr.Frist_Name',
+                    'pr.Last_Name',
+                    'pr.Foto AS profile_photo',
+                ])
+                ->from(['u' => 'user'])
+                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
+                ->where([
+                    'and',
+                    ['u.username' => $withUsername],
+                    ['<>', 'u.id', $currentUserId],
+                ])
+                ->one();
+        }
+
+        $messages = [];
+        if ($selectedUser !== null) {
+            $selectedUserId = (int) $selectedUser['id'];
+
+            Yii::$app->db->createCommand()->update('{{%mensagem}}', [
+                'lida' => 1,
+            ], [
+                'destinatario_id' => $currentUserId,
+                'remetente_id' => $selectedUserId,
+                'lida' => 0,
+            ])->execute();
+
+            $messages = (new Query())
+                ->select([
+                    'm.id',
+                    'm.remetente_id AS sender_id',
+                    'm.destinatario_id AS receiver_id',
+                    'm.conteudo',
+                    'm.data_envio AS created_at',
+                    'm.lida',
+                ])
+                ->from(['m' => 'mensagem'])
+                ->where([
+                    'or',
+                    ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $selectedUserId]],
+                    ['and', ['m.remetente_id' => $selectedUserId], ['m.destinatario_id' => $currentUserId]],
+                ])
+                ->orderBy(['m.data_envio' => SORT_ASC, 'm.id' => SORT_ASC])
+                ->limit(300)
+                ->all();
+
+            if (isset($conversationMetaByUserId[$selectedUserId])) {
+                $conversationMetaByUserId[$selectedUserId]['unread_count'] = 0;
+            }
+        }
+
+        $userSearchResults = [];
+        if ($userSearchTerm !== '') {
+            $userSearchResults = (new Query())
+                ->select([
+                    'u.id',
+                    'u.username',
+                    'pr.Frist_Name',
+                    'pr.Last_Name',
+                    'pr.Foto AS profile_photo',
+                ])
+                ->from(['u' => 'user'])
+                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
+                ->where([
+                    'and',
+                    ['<>', 'u.id', $currentUserId],
+                    [
+                        'or',
+                        ['like', 'u.username', $userSearchTerm],
+                        ['like', 'pr.Frist_Name', $userSearchTerm],
+                        ['like', 'pr.Last_Name', $userSearchTerm],
+                    ],
+                ])
+                ->orderBy(['u.username' => SORT_ASC])
+                ->limit(12)
+                ->all();
+        }
+
+        return $this->render('mensagens', [
+            'conversationUsers' => $conversationUsers,
+            'conversationMetaByUserId' => $conversationMetaByUserId,
+            'selectedUser' => $selectedUser,
+            'messages' => $messages,
+            'currentUserId' => $currentUserId,
+            'userSearchTerm' => $userSearchTerm,
+            'userSearchResults' => $userSearchResults,
+        ]);
+    }
+
+    public function actionMensagensUpdates($with = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $currentUserId = (int) Yii::$app->user->id;
+        $withUsername = trim((string) $with);
+        if ($withUsername === '') {
+            return [
+                'success' => false,
+                'message' => 'Utilizador em falta.',
+            ];
+        }
+
+        $selectedUser = (new Query())
+            ->select([
+                'u.id',
+                'u.username',
+                'pr.Frist_Name',
+                'pr.Last_Name',
+                'pr.Foto AS profile_photo',
+            ])
+            ->from(['u' => 'user'])
+            ->leftJoin(['pr' => 'perfil',], 'pr.user_id = u.id')
+            ->where([
+                'and',
+                ['u.username' => $withUsername],
+                ['<>', 'u.id', $currentUserId],
+            ])
+            ->one();
+
+        if ($selectedUser === null) {
+            return [
+                'success' => false,
+                'message' => 'Utilizador nao encontrado.',
+            ];
+        }
+
+        $selectedUserId = (int) $selectedUser['id'];
+
+        Yii::$app->db->createCommand()->update('{{%mensagem}}', [
+            'lida' => 1,
+        ], [
+            'destinatario_id' => $currentUserId,
+            'remetente_id' => $selectedUserId,
+            'lida' => 0,
+        ])->execute();
+
+        $messages = (new Query())
+            ->select([
+                'm.id',
+                'm.remetente_id AS sender_id',
+                'm.destinatario_id AS receiver_id',
+                'm.conteudo',
+                'm.data_envio AS created_at',
+                'm.lida',
+            ])
+            ->from(['m' => 'mensagem'])
+            ->where([
+                'or',
+                ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $selectedUserId]],
+                ['and', ['m.remetente_id' => $selectedUserId], ['m.destinatario_id' => $currentUserId]],
+            ])
+            ->orderBy(['m.data_envio' => SORT_ASC, 'm.id' => SORT_ASC])
+            ->limit(300)
+            ->all();
+
+        $conversationRows = Yii::$app->db->createCommand(
+            'SELECT
+                CASE WHEN m.remetente_id = :uid THEN m.destinatario_id ELSE m.remetente_id END AS other_user_id,
+                MAX(m.data_envio) AS last_message_at,
+                SUM(CASE WHEN m.destinatario_id = :uid AND m.lida = 0 THEN 1 ELSE 0 END) AS unread_count
+             FROM mensagem m
+             WHERE m.remetente_id = :uid OR m.destinatario_id = :uid
+             GROUP BY other_user_id
+             ORDER BY last_message_at DESC',
+            [':uid' => $currentUserId]
+        )->queryAll();
+
+        $conversationMetaByUserId = [];
+        foreach ($conversationRows as $row) {
+            $otherId = (int) ($row['other_user_id'] ?? 0);
+            if ($otherId <= 0) {
+                continue;
+            }
+            $conversationMetaByUserId[$otherId] = [
+                'last_message_at' => (string) ($row['last_message_at'] ?? ''),
+                'unread_count' => (int) ($row['unread_count'] ?? 0),
+                'last_message_preview' => '',
+            ];
+        }
+
+        $conversationUserIds = array_values(array_unique(array_map(static function ($row) {
+            return (int) ($row['other_user_id'] ?? 0);
+        }, $conversationRows)));
+        $conversationUserIds = array_filter($conversationUserIds, static function ($id) {
+            return $id > 0;
+        });
+
+        if (!empty($conversationUserIds)) {
+            foreach ($conversationUserIds as $otherId) {
+                $latestMessage = (new Query())
+                    ->select(['m.conteudo'])
+                    ->from(['m' => 'mensagem'])
+                    ->where([
+                        'or',
+                        ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $otherId]],
+                        ['and', ['m.remetente_id' => $otherId], ['m.destinatario_id' => $currentUserId]],
+                    ])
+                    ->orderBy(['m.data_envio' => SORT_DESC, 'm.id' => SORT_DESC])
+                    ->limit(1)
+                    ->one();
+
+                if ($latestMessage !== false && isset($conversationMetaByUserId[$otherId])) {
+                    $conversationMetaByUserId[$otherId]['last_message_preview'] = trim((string) ($latestMessage['conteudo'] ?? ''));
+                }
+            }
+        }
+
+        if ($selectedUserId > 0) {
+            $latestMessage = (new Query())
+                ->select(['m.conteudo'])
+                ->from(['m' => 'mensagem'])
+                ->where([
+                    'or',
+                    ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $selectedUserId]],
+                    ['and', ['m.remetente_id' => $selectedUserId], ['m.destinatario_id' => $currentUserId]],
+                ])
+                ->orderBy(['m.data_envio' => SORT_DESC, 'm.id' => SORT_DESC])
+                ->limit(1)
+                ->one();
+
+            if ($latestMessage !== false) {
+                $conversationMetaByUserId[$selectedUserId]['last_message_preview'] = trim((string) ($latestMessage['conteudo'] ?? ''));
+            }
+        }
+
+        if (isset($conversationMetaByUserId[$selectedUserId])) {
+            $conversationMetaByUserId[$selectedUserId]['unread_count'] = 0;
+        }
+
+        return [
+            'success' => true,
+            'messages' => $messages,
+            'conversationMetaByUserId' => $conversationMetaByUserId,
+        ];
     }
 
     public function actionGotinha()
     {
         return $this->render('gotinha');
+    }
+
+    public function actionProcurar()
+    {
+        $term = trim((string) Yii::$app->request->get('q', ''));
+        $users = [];
+        $posts = [];
+
+        if ($term !== '') {
+            $users = (new Query())
+                ->select([
+                    'u.id',
+                    'u.username',
+                    'pr.Frist_Name',
+                    'pr.Last_Name',
+                    'pr.Bio',
+                    'pr.Foto AS profile_photo',
+                ])
+                ->from(['u' => 'user'])
+                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
+                ->where([
+                    'or',
+                    ['like', 'u.username', $term],
+                    ['like', 'pr.Frist_Name', $term],
+                    ['like', 'pr.Last_Name', $term],
+                    ['like', 'pr.Bio', $term],
+                ])
+                ->orderBy(['u.username' => SORT_ASC])
+                ->limit(20)
+                ->all();
+
+            $posts = (new Query())
+                ->select([
+                    'p.id',
+                    'p.titulo',
+                    'p.conteudo',
+                    'p.imagem',
+                    'p.data_criacao',
+                    'u.username',
+                    'pr.Foto AS profile_photo',
+                ])
+                ->from(['p' => 'post'])
+                ->innerJoin(['u' => 'user'], 'u.id = p.user_id')
+                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = p.user_id')
+                ->where([
+                    'or',
+                    ['like', 'p.titulo', $term],
+                    ['like', 'p.conteudo', $term],
+                    ['like', 'u.username', $term],
+                ])
+                ->orderBy(['p.data_criacao' => SORT_DESC, 'p.id' => SORT_DESC])
+                ->limit(30)
+                ->all();
+        }
+
+        return $this->render('procurar', [
+            'term' => $term,
+            'users' => $users,
+            'posts' => $posts,
+        ]);
     }
 
     public function actionBadge()
