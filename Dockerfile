@@ -1,29 +1,23 @@
-# Imagem base: PHP 8.2 com Apache
 FROM php:8.2-apache
 
-# Instalar extensões necessárias para Yii2 + MySQL
+# Garantir que só um MPM está ativo
+RUN a2dismod mpm_prefork mpm_worker || true
+RUN a2enmod mpm_event rewrite
+
+# Extensões PHP
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Ativar mod_rewrite (URLs amigáveis do Yii2)
-RUN a2enmod rewrite
-
-# Copiar código para o container
+# Copiar código
 COPY . /var/www/html/
 
-# Definir diretório de trabalho
 WORKDIR /var/www/html/
 
-# Instalar Composer (a partir da imagem oficial)
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# Instalar dependências do Yii2
 RUN composer install --no-dev --prefer-dist --no-scripts --optimize-autoloader || true
 
-# Apontar o DocumentRoot para a pasta web/
+# DocumentRoot
 RUN sed -i 's#/var/www/html#/var/www/html/web#g' /etc/apache2/sites-available/000-default.conf
 
-# Railway expõe a porta 8080, mas Apache usa 80
 EXPOSE 80
-
-# Iniciar Apache
 CMD ["apache2-foreground"]
