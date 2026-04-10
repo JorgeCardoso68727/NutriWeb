@@ -1,7 +1,7 @@
-# Usa imagem oficial PHP com Apache
+# Imagem base com PHP + Apache
 FROM php:8.2-apache
 
-# Instalar dependências do sistema
+# Instalar dependências necessárias
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -12,33 +12,36 @@ RUN apt-get update && apt-get install -y \
     curl \
     && docker-php-ext-install pdo pdo_mysql zip gd
 
-# Ativar mod_rewrite (necessário para Yii2)
+# Ativar mod_rewrite (Yii precisa disto)
 RUN a2enmod rewrite
 
 # Instalar Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Definir diretório de trabalho
+# Diretório da app
 WORKDIR /var/www/html
 
-# Copiar ficheiros do projeto
+# Copiar projeto
 COPY . .
 
 # Instalar dependências do Yii2
 RUN composer install --no-dev --optimize-autoloader
 
-# Permissões (importante para Yii2)
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/runtime \
-    && chmod -R 755 /var/www/html/web/assets
+# 🔥 Criar pastas obrigatórias do Yii2
+RUN mkdir -p runtime web/assets
 
-# Configurar Apache para usar /web como root
+# Permissões corretas
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 runtime web/assets
+
+# Configurar Apache para apontar para /web
 RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/web|g' /etc/apache2/sites-available/000-default.conf
 
-# Porta (Railway usa 8080 normalmente)
-EXPOSE 8080
-
-# Ajustar Apache para Railway
+# Ajustar porta dinâmica do Railway
 RUN sed -i 's/80/${PORT}/g' /etc/apache2/ports.conf /etc/apache2/sites-available/000-default.conf
 
-CMD ["apache2-foreground"]
+# Expor porta
+EXPOSE 8080
+
+# 🚀 Garantir que as pastas existem em runtime também
+CMD mkdir -p /var/www/html/runtime /var/www/html/web/assets && apache2-foreground
