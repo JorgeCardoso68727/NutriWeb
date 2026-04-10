@@ -20,9 +20,11 @@ $followingList = $followingList ?? [];
 $username = $userForView ? $userForView->username : 'utilizador';
 $fullName = trim(($profile->Frist_Name ?? '') . ' ' . ($profile->Last_Name ?? ''));
 $bio = $profile->Bio ?? '';
-$avatar = !empty($profile->Foto)
-    ? Url::to('@web/' . ltrim($profile->Foto, '/'))
-    : Url::to('@web/Img/default.jpeg');
+if (empty($profile->Foto) || strcasecmp((string) $profile->Foto, 'img/default.jpeg') === 0) {
+    $avatar = Url::to('@web/Img/default.jpeg');
+} else {
+    $avatar = Url::to('@web/' . ltrim((string) $profile->Foto, '/'));
+}
 $this->title = 'Nutriweb - '. $username;
 ?>
 

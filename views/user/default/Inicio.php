@@ -33,9 +33,11 @@ $this->title = 'Nutriweb - Início';
                     : Url::to('@web/Img/Pato-Com-Arroz-bolohesa.png');
 
                 $avatarPath = trim((string) ($post['profile_photo'] ?? ''));
-                $avatarUrl = $avatarPath !== ''
-                    ? Url::to('@web/' . ltrim($avatarPath, '/'))
-                    : Url::to('@web/Img/default.jpeg');
+                if ($avatarPath === '' || strcasecmp($avatarPath, 'img/default.jpeg') === 0) {
+                    $avatarUrl = Url::to('@web/Img/default.jpeg');
+                } else {
+                    $avatarUrl = Url::to('@web/' . ltrim($avatarPath, '/'));
+                }
 
                 $username = trim((string) ($post['username'] ?? ''));
                 $displayName = $username !== '' ? $username : 'Utilizador';
@@ -111,9 +113,11 @@ $this->title = 'Nutriweb - Início';
                 <?php foreach ($nutritionists as $nutritionist): ?>
                     <?php
                     $photoPath = trim((string) ($nutritionist['profile_photo'] ?? ''));
-                    $photoUrl = $photoPath !== ''
-                        ? Url::to('@web/' . ltrim($photoPath, '/'))
-                        : Url::to('@web/Img/default.jpeg');
+                    if ($photoPath === '' || strcasecmp($photoPath, 'img/default.jpeg') === 0) {
+                        $photoUrl = Url::to('@web/Img/default.jpeg');
+                    } else {
+                        $photoUrl = Url::to('@web/' . ltrim($photoPath, '/'));
+                    }
 
                     $firstName = trim((string) ($nutritionist['Frist_Name'] ?? ''));
                     $lastName = trim((string) ($nutritionist['Last_Name'] ?? ''));

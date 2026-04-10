@@ -26,9 +26,11 @@ $imageUrl = $imagePath !== ''
     : Url::to('@web/Img/Pato-Com-Arroz-bolohesa.png');
 
 $avatarPath = trim((string) ($post['profile_photo'] ?? ''));
-$avatarUrl = $avatarPath !== ''
-    ? Url::to('@web/' . ltrim($avatarPath, '/'))
-    : Url::to('@web/Img/default.jpeg');
+if ($avatarPath === '' || strcasecmp($avatarPath, 'img/default.jpeg') === 0) {
+    $avatarUrl = Url::to('@web/Img/default.jpeg');
+} else {
+    $avatarUrl = Url::to('@web/' . ltrim($avatarPath, '/'));
+}
 
 $username = trim((string) ($post['username'] ?? ''));
 $displayName = $username !== '' ? $username : 'Utilizador';
