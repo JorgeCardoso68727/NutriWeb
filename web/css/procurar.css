@@ -6,6 +6,7 @@ body {
 }
 
 .search-page {
+    margin-left: 280px;
     padding: 22px 0 30px;
     max-width: 960px;
     margin: 0 auto;
