@@ -12,6 +12,7 @@ use yii\db\ActiveRecord;
  * @property int $remetente_id
  * @property int $destinatario_id
  * @property string $conteudo
+ * @property string|null $anexo
  * @property string|null $data_envio
  * @property int|null $lida
  */
@@ -25,10 +26,14 @@ class Mensagem extends ActiveRecord
     public function rules()
     {
         return [
-            [['remetente_id', 'destinatario_id', 'conteudo'], 'required'],
+            [['remetente_id', 'destinatario_id'], 'required'],
             [['remetente_id', 'destinatario_id', 'lida'], 'integer'],
             [['conteudo'], 'string'],
+            [['anexo'], 'string', 'max' => 255],
             [['data_envio'], 'safe'],
+            [['conteudo'], 'required', 'when' => function ($model) {
+                return empty($model->anexo);
+            }],
             [['remetente_id'], 'exist', 'skipOnError' => true, 'targetClass' => ModuleUser::class, 'targetAttribute' => ['remetente_id' => 'id']],
             [['destinatario_id'], 'exist', 'skipOnError' => true, 'targetClass' => ModuleUser::class, 'targetAttribute' => ['destinatario_id' => 'id']],
         ];
@@ -41,6 +46,7 @@ class Mensagem extends ActiveRecord
             'remetente_id' => 'Remetente',
             'destinatario_id' => 'Destinatario',
             'conteudo' => 'Conteudo',
+            'anexo' => 'Anexo',
             'data_envio' => 'Data de envio',
             'lida' => 'Lida',
         ];

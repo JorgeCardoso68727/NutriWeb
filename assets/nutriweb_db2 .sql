@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS `mensagem` (
   `remetente_id` int NOT NULL,
   `destinatario_id` int NOT NULL,
   `conteudo` text NOT NULL,
+  `anexo` varchar(255) DEFAULT NULL,
   `data_envio` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `lida` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id`),

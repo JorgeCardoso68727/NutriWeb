@@ -17,6 +17,7 @@ class m260410_000003_create_mensagem_table extends Migration
                 'remetente_id' => $this->integer()->notNull(),
                 'destinatario_id' => $this->integer()->notNull(),
                 'conteudo' => $this->text()->notNull(),
+                'anexo' => $this->string(255)->null(),
                 'data_envio' => $this->timestamp()->defaultExpression('CURRENT_TIMESTAMP'),
                 'lida' => $this->boolean()->defaultValue(0),
             ], $tableOptions);

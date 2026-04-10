@@ -160,14 +160,18 @@ if ($selectedUser !== null) {
                     <?php else: ?>
                         <?php foreach ($messages as $message): ?>
                             <?php
-                            $isMine = (int) ($message['sender_id'] ?? 0) === $currentUserId;
-                            $timestamp = trim((string) ($message['created_at'] ?? ''));
-                            $formattedTime = $timestamp !== '' ? date('H:i', strtotime($timestamp)) : '';
-                            $isRead = (int) ($message['lida'] ?? 0) === 1;
-                            ?>
+                                $isMine = (int) ($message['sender_id'] ?? 0) === $currentUserId;
+                                $timestamp = trim((string) ($message['created_at'] ?? ''));
+                                $formattedTime = $timestamp !== '' ? date('H:i', strtotime($timestamp)) : '';
+                                $isRead = (int) ($message['lida'] ?? 0) === 1;
+                                $attachmentUrl = trim((string) ($message['attachment_url'] ?? ''));
+                                ?>
                             <div class="msg-row <?= $isMine ? 'mine' : 'theirs' ?>">
                                 <div class="msg-bubble <?= $isMine ? 'msg-sent' : 'msg-received' ?>">
                                     <p class="msg-text"><?= Html::encode((string) ($message['conteudo'] ?? '')) ?></p>
+                                        <?php if ($attachmentUrl !== ''): ?>
+                                            <img src="<?= Html::encode($attachmentUrl) ?>" alt="Anexo da mensagem" style="display:block; max-width:260px; width:100%; height:auto; margin-top:8px; border-radius:12px;">
+                                        <?php endif; ?>
                                     <div class="msg-footer">
                                         <?php if ($isMine): ?>
                                             <span class="msg-tick <?= $isRead ? 'read' : 'sent' ?>">
@@ -188,12 +192,19 @@ if ($selectedUser !== null) {
                     <?php endif; ?>
                 </div>
 
-                <?= Html::beginForm(['mensagens', 'with' => $selectedUsername], 'post', ['class' => 'chat-input-container', 'id' => 'chatSendForm']) ?>
+                <?= Html::beginForm(['mensagens', 'with' => $selectedUsername], 'post', ['class' => 'chat-input-container', 'id' => 'chatSendForm', 'enctype' => 'multipart/form-data']) ?>
                 <?= Html::hiddenInput('target_user_id', (string) ((int) $selectedUser['id'])) ?>
-                <div class="custom-input-group">
-                    <i class="bi bi-plus-circle"></i>
+                <div id="chatAttachmentPreviewWrap" class="mb-2 d-none">
+                    <img id="chatAttachmentPreview" alt="Pré-visualização da foto" style="display:block; max-width:180px; width:100%; height:auto; border-radius:12px; border:1px solid rgba(0,0,0,.08);">
+                </div>
+                <div class="custom-input-group" style="display:flex; align-items:center; gap:10px;">
+                    <input type="file" name="anexo" id="chatAttachmentInput" accept="image/*" class="d-none">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center" id="chatAttachmentButton" style="width:40px; height:40px; flex:0 0 auto;" aria-label="Anexar foto" title="Anexar foto">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
                     <?= Html::textInput('conteudo', '', [
                         'class' => 'chat-input',
+                        'style' => 'flex:1 1 auto;',
                         'placeholder' => 'Escreve uma mensagem...',
                         'maxlength' => 2000,
                         'autocomplete' => 'off',
@@ -211,6 +222,11 @@ $this->registerJs(<<<'JS'
 (function () {
     var chat = document.getElementById('chatMessages');
     var sendForm = document.getElementById('chatSendForm');
+    var attachmentInput = document.getElementById('chatAttachmentInput');
+    var attachmentButton = document.getElementById('chatAttachmentButton');
+    var attachmentPreviewWrap = document.getElementById('chatAttachmentPreviewWrap');
+    var attachmentPreview = document.getElementById('chatAttachmentPreview');
+    var attachmentPreviewObjectUrl = '';
     if (!chat) {
         return;
     }
@@ -243,6 +259,21 @@ $this->registerJs(<<<'JS'
         return hours + ':' + minutes;
     }
 
+    function clearAttachmentPreview() {
+        if (attachmentPreviewObjectUrl) {
+            URL.revokeObjectURL(attachmentPreviewObjectUrl);
+            attachmentPreviewObjectUrl = '';
+        }
+
+        if (attachmentPreviewWrap) {
+            attachmentPreviewWrap.classList.add('d-none');
+        }
+
+        if (attachmentPreview) {
+            attachmentPreview.removeAttribute('src');
+        }
+    }
+
     function renderMessages(messages) {
         if (!Array.isArray(messages) || messages.length === 0) {
             chat.innerHTML = '<div class="empty-note">Ainda nao existem mensagens nesta conversa.</div>';
@@ -257,9 +288,13 @@ $this->registerJs(<<<'JS'
             var text = escapeHtml(message.conteudo || '');
             var timeLabel = formatTimestamp(message.created_at || '');
             var isRead = Number(message.lida || 0) === 1;
+            var attachmentUrl = String(message.attachment_url || '');
             
             html += '<div class="' + rowClass + '">';
             html += '<div class="' + bubbleClass + '">';
+            if (attachmentUrl) {
+                html += '<img src="' + escapeHtml(attachmentUrl) + '" alt="Anexo da mensagem" style="display:block; max-width:260px; width:100%; height:auto; margin-top:8px; border-radius:12px;">';
+            }
             html += '<p class="msg-text">' + text + '</p>';
             html += '<div class="msg-footer">';
             
@@ -340,8 +375,9 @@ $this->registerJs(<<<'JS'
 
         var input = sendForm.querySelector('.chat-input');
         var submitButton = sendForm.querySelector('.chat-send-btn');
+        var hasAttachment = attachmentInput && attachmentInput.files && attachmentInput.files.length > 0;
         var text = input ? String(input.value || '').trim() : '';
-        if (!text) {
+        if (!text && !hasAttachment) {
             return;
         }
 
@@ -380,6 +416,10 @@ $this->registerJs(<<<'JS'
                 input.value = '';
                 input.focus();
             }
+            if (attachmentInput) {
+                attachmentInput.value = '';
+            }
+            clearAttachmentPreview();
 
             await refreshConversation();
         } catch (error) {
@@ -393,6 +433,26 @@ $this->registerJs(<<<'JS'
 
     chat.scrollTop = chat.scrollHeight;
     setInterval(refreshConversation, 3000);
+
+    if (attachmentButton && attachmentInput) {
+        attachmentButton.addEventListener('click', function () {
+            attachmentInput.click();
+        });
+
+        attachmentInput.addEventListener('change', function () {
+            if (attachmentInput.files && attachmentInput.files.length > 0) {
+                clearAttachmentPreview();
+
+                if (attachmentPreview && attachmentPreviewWrap) {
+                    attachmentPreviewObjectUrl = URL.createObjectURL(attachmentInput.files[0]);
+                    attachmentPreview.src = attachmentPreviewObjectUrl;
+                    attachmentPreviewWrap.classList.remove('d-none');
+                }
+            } else {
+                clearAttachmentPreview();
+            }
+        });
+    }
 
     if (sendForm) {
         sendForm.addEventListener('submit', sendMessageWithoutReload);

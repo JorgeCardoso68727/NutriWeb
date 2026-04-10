@@ -17,6 +17,7 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use yii\web\UploadedFile;
 use yii\helpers\FileHelper;
+use yii\helpers\Url;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\widgets\ActiveForm;
@@ -963,6 +964,26 @@ class MyDefaultController extends Controller
             $isAjaxRequest = Yii::$app->request->isAjax;
             $targetUserId = (int) Yii::$app->request->post('target_user_id', 0);
             $messageText = trim((string) Yii::$app->request->post('conteudo', ''));
+            $messageAttachment = UploadedFile::getInstanceByName('anexo');
+
+            if ($messageAttachment !== null && $messageAttachment->error === UPLOAD_ERR_NO_FILE) {
+                $messageAttachment = null;
+            }
+
+            if ($messageAttachment !== null) {
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                $attachmentExtension = strtolower((string) $messageAttachment->extension);
+                if (!in_array($attachmentExtension, $allowedExtensions, true)) {
+                    if ($isAjaxRequest) {
+                        Yii::$app->response->format = Response::FORMAT_JSON;
+                        Yii::$app->response->statusCode = 400;
+                        return ['success' => false, 'message' => 'Apenas imagens sao permitidas.'];
+                    }
+
+                    Yii::$app->session->setFlash('Mensagem-error', 'Apenas imagens sao permitidas.');
+                    return $this->redirect(['mensagens']);
+                }
+            }
 
             if ($targetUserId <= 0 || $targetUserId === $currentUserId) {
                 if ($isAjaxRequest) {
@@ -974,7 +995,7 @@ class MyDefaultController extends Controller
                 return $this->redirect(['mensagens']);
             }
 
-            if ($messageText === '') {
+            if ($messageText === '' && $messageAttachment === null) {
                 $targetUsername = (string) (new Query())
                     ->select(['u.username'])
                     ->from(['u' => 'user'])
@@ -1009,6 +1030,29 @@ class MyDefaultController extends Controller
             $message->destinatario_id = $targetUserId;
             $message->conteudo = $messageText;
             $message->lida = 0;
+
+            if ($messageAttachment !== null) {
+                $uploadDir = Yii::getAlias('@webroot/uploads/messages');
+                FileHelper::createDirectory($uploadDir);
+
+                $safeBaseName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($messageAttachment->name, PATHINFO_FILENAME));
+                $safeBaseName = $safeBaseName ?: 'anexo';
+                $fileName = $currentUserId . '_' . time() . '_' . $safeBaseName . '.' . $messageAttachment->extension;
+                $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
+
+                if ($messageAttachment->saveAs($fullPath)) {
+                    $message->anexo = 'uploads/messages/' . $fileName;
+                } else {
+                    if ($isAjaxRequest) {
+                        Yii::$app->response->format = Response::FORMAT_JSON;
+                        Yii::$app->response->statusCode = 500;
+                        return ['success' => false, 'message' => 'Nao foi possivel guardar o anexo.'];
+                    }
+
+                    Yii::$app->session->setFlash('Mensagem-error', 'Nao foi possivel guardar o anexo.');
+                    return $this->redirect(['mensagens', 'with' => (string) (new Query())->select(['u.username'])->from(['u' => 'user'])->where(['u.id' => $targetUserId])->scalar()]);
+                }
+            }
 
             if ($message->save(false)) {
                 $targetUsername = (string) (new Query())
@@ -1073,7 +1117,7 @@ class MyDefaultController extends Controller
         if (!empty($conversationUserIds)) {
             foreach ($conversationUserIds as $otherId) {
                 $latestMessage = (new Query())
-                    ->select(['m.conteudo'])
+                    ->select(['m.conteudo', 'm.anexo'])
                     ->from(['m' => 'mensagem'])
                     ->where([
                         'or',
@@ -1085,7 +1129,7 @@ class MyDefaultController extends Controller
                     ->one();
 
                 if ($latestMessage !== false && isset($conversationMetaByUserId[$otherId])) {
-                    $conversationMetaByUserId[$otherId]['last_message_preview'] = trim((string) ($latestMessage['conteudo'] ?? ''));
+                    $conversationMetaByUserId[$otherId]['last_message_preview'] = $this->buildMessagePreview($latestMessage);
                 }
             }
         }
@@ -1150,6 +1194,7 @@ class MyDefaultController extends Controller
                     'm.remetente_id AS sender_id',
                     'm.destinatario_id AS receiver_id',
                     'm.conteudo',
+                    'm.anexo AS attachment_path',
                     'm.data_envio AS created_at',
                     'm.lida',
                 ])
@@ -1162,6 +1207,8 @@ class MyDefaultController extends Controller
                 ->orderBy(['m.data_envio' => SORT_ASC, 'm.id' => SORT_ASC])
                 ->limit(300)
                 ->all();
+
+            $messages = $this->attachMessageUrls($messages);
 
             if (isset($conversationMetaByUserId[$selectedUserId])) {
                 $conversationMetaByUserId[$selectedUserId]['unread_count'] = 0;
@@ -1259,6 +1306,7 @@ class MyDefaultController extends Controller
                 'm.remetente_id AS sender_id',
                 'm.destinatario_id AS receiver_id',
                 'm.conteudo',
+                'm.anexo AS attachment_path',
                 'm.data_envio AS created_at',
                 'm.lida',
             ])
@@ -1319,14 +1367,14 @@ class MyDefaultController extends Controller
                     ->one();
 
                 if ($latestMessage !== false && isset($conversationMetaByUserId[$otherId])) {
-                    $conversationMetaByUserId[$otherId]['last_message_preview'] = trim((string) ($latestMessage['conteudo'] ?? ''));
+                        $conversationMetaByUserId[$otherId]['last_message_preview'] = $this->buildMessagePreview($latestMessage);
                 }
             }
         }
 
         if ($selectedUserId > 0) {
             $latestMessage = (new Query())
-                ->select(['m.conteudo'])
+                ->select(['m.conteudo', 'm.anexo'])
                 ->from(['m' => 'mensagem'])
                 ->where([
                     'or',
@@ -1338,7 +1386,7 @@ class MyDefaultController extends Controller
                 ->one();
 
             if ($latestMessage !== false) {
-                $conversationMetaByUserId[$selectedUserId]['last_message_preview'] = trim((string) ($latestMessage['conteudo'] ?? ''));
+                $conversationMetaByUserId[$selectedUserId]['last_message_preview'] = $this->buildMessagePreview($latestMessage);
             }
         }
 
@@ -1348,9 +1396,38 @@ class MyDefaultController extends Controller
 
         return [
             'success' => true,
-            'messages' => $messages,
+            'messages' => $this->attachMessageUrls($messages),
             'conversationMetaByUserId' => $conversationMetaByUserId,
         ];
+    }
+
+    private function attachMessageUrls(array $messages)
+    {
+        foreach ($messages as $index => $message) {
+            $messages[$index]['attachment_url'] = $this->buildMessageAttachmentUrl((string) ($message['attachment_path'] ?? ''));
+        }
+
+        return $messages;
+    }
+
+    private function buildMessageAttachmentUrl($attachmentPath)
+    {
+        $attachmentPath = trim((string) $attachmentPath);
+        if ($attachmentPath === '' || strcasecmp($attachmentPath, 'img/default.jpeg') === 0) {
+            return '';
+        }
+
+        return Url::to('@web/' . ltrim($attachmentPath, '/'));
+    }
+
+    private function buildMessagePreview(array $message)
+    {
+        $text = trim((string) ($message['conteudo'] ?? ''));
+        if ($text !== '') {
+            return $text;
+        }
+
+        return trim((string) ($message['anexo'] ?? '')) !== '' ? 'Foto' : '';
     }
 
     public function actionGotinha()
