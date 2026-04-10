@@ -1,9 +1,9 @@
 [phases.setup]
 nixPkgs = [
-  "php82",
-  "php82Extensions.pdo",
-  "php82Extensions.pdo_mysql",
-  "composer"
+    "php82",
+    "php82Extensions.mysql",
+    "php82Extensions.pdo_mysql",
+    "composer"
 ]
 
 [phases.install]
@@ -11,6 +11,3 @@ cmds = ["composer install --no-dev --optimize-autoloader"]
 
 [start]
 cmd = "php -S 0.0.0.0:8080 -t web"
-
-[build]
-root = "Nutriweb-Github"
