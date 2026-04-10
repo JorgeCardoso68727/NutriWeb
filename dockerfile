@@ -17,7 +17,7 @@ WORKDIR /var/www/html/
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Instalar dependências do Yii2
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --prefer-dist --no-scripts --optimize-autoloader || true
 
 # Apontar o DocumentRoot para a pasta web/
 RUN sed -i 's#/var/www/html#/var/www/html/web#g' /etc/apache2/sites-available/000-default.conf
