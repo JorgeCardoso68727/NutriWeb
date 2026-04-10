@@ -950,7 +950,7 @@ class MyDefaultController extends Controller
             $likedPostIds = array_fill_keys(array_map('intval', $userLikedPostIds), true);
         }
 
-        return $this->render('Feed', [
+        return $this->render('feed', [
             'posts' => $posts,
             'likedPostIds' => $likedPostIds,
             'likeCountByPost' => $likeCountByPost,
