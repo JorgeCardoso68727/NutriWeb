@@ -60,10 +60,10 @@ $lastPedidoPdf = $lastPedidoPdf ?? '';
                                         </td>
                                         <td><?= Html::encode($request['created_at']) ?></td>
                                         <td class="pedido-nutri-actions-cell">
-                                            <?= Html::beginForm(['/user/badge-review', 'id' => $request['id'], 'acao' => 'aprovar'], 'post', ['class' => 'd-inline']) ?>
+                                            <?= Html::beginForm(['/badge/badge-review', 'id' => $request['id'], 'acao' => 'aprovar'], 'post', ['class' => 'd-inline']) ?>
                                             <button type="submit" class="btn btn-sm btn-success">Aceitar</button>
                                             <?= Html::endForm() ?>
-                                            <?= Html::beginForm(['/user/badge-review', 'id' => $request['id'], 'acao' => 'rejeitar'], 'post', ['class' => 'd-inline']) ?>
+                                            <?= Html::beginForm(['/badge/badge-review', 'id' => $request['id'], 'acao' => 'rejeitar'], 'post', ['class' => 'd-inline']) ?>
                                             <button type="submit" class="btn btn-sm btn-outline-danger">Rejeitar</button>
                                             <?= Html::endForm() ?>
                                         </td>
@@ -83,7 +83,7 @@ $lastPedidoPdf = $lastPedidoPdf ?? '';
                 <div class="text-center mt-5">
                     <p class="small text-muted mb-4">Baixar Certificado/diploma</p>
 
-                    <?= Html::beginForm(['/user/badge'], 'post', ['enctype' => 'multipart/form-data', 'id' => 'badgeForm']) ?>
+                    <?= Html::beginForm(['/badge'], 'post', ['enctype' => 'multipart/form-data', 'id' => 'badgeForm']) ?>
                     <input type="file" class="input_file" id="diplomaPdf" name="diplomaPdf" accept="application/pdf" required style="display: none;">
                     <label class="label_file" for="diplomaPdf">
                         <i class="bi bi-download display-1"></i>
@@ -113,11 +113,19 @@ $lastPedidoPdf = $lastPedidoPdf ?? '';
         <?php endif; ?>
 
         <script>
-            document.getElementById('diplomaPdf').addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    document.getElementById('badgeForm').submit();
+            (function() {
+                var diplomaInput = document.getElementById('diplomaPdf');
+                var badgeForm = document.getElementById('badgeForm');
+                if (!diplomaInput || !badgeForm) {
+                    return;
                 }
-            });
+
+                diplomaInput.addEventListener('change', function() {
+                    if (this.files.length > 0) {
+                        badgeForm.submit();
+                    }
+                });
+            })();
         </script>
     </div>
 </div>

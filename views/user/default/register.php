@@ -38,7 +38,7 @@ $this->beginPage();
                             'errorOptions' => ['class' => 'invalid-feedback d-block'],
                         ],
                     ]); ?>
-
+                    <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->getCsrfToken()) ?>
                     <div class="row g-2">
                         <div class="col-6">
                             <?= $form->field($profile, 'Frist_Name')->textInput(['placeholder' => 'Primeiro nome']) ?>

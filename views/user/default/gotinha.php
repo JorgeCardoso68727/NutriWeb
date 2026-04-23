@@ -33,7 +33,12 @@ $recentEntries = is_array($recentEntries ?? null) ? $recentEntries : [];
                 <img src="<?= Html::encode(Url::to('@web/Img/gotinha.png')) ?>" alt="Sr Gotinha" class="gotinha-illustration">
                 <div>
                     <h5 class="mb-1">Hoje: <?= Html::encode((string) $todayTotalMl) ?> ml</h5>
-                    <p class="text-muted mb-0">Meta diaria: <?= Html::encode((string) $dailyGoalMl) ?> ml</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <p class="text-muted mb-0">Meta diaria: <?= Html::encode((string) $dailyGoalMl) ?> ml</p>
+                        <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#editMetaModal">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -50,14 +55,14 @@ $recentEntries = is_array($recentEntries ?? null) ? $recentEntries : [];
 
             <div class="quick-actions">
                 <?php foreach ([150, 200, 250, 500] as $amount): ?>
-                    <?= Html::beginForm(['gotinha'], 'post', ['class' => 'quick-form']) ?>
+                    <?= Html::beginForm(['/gotinha'], 'post', ['class' => 'quick-form']) ?>
                     <?= Html::hiddenInput('quantidade_ml', (string) $amount) ?>
                     <?= Html::submitButton('+' . $amount . ' ml', ['class' => 'btn btn-outline-success btn-sm w-100']) ?>
                     <?= Html::endForm() ?>
                 <?php endforeach; ?>
             </div>
 
-            <?= Html::beginForm(['gotinha'], 'post', ['class' => 'custom-form']) ?>
+            <?= Html::beginForm(['/gotinha'], 'post', ['class' => 'custom-form']) ?>
             <label for="quantidade-ml" class="form-label mb-1">Quantidade personalizada (ml)</label>
             <div class="input-group">
                 <?= Html::input('number', 'quantidade_ml', '', [
@@ -92,5 +97,34 @@ $recentEntries = is_array($recentEntries ?? null) ? $recentEntries : [];
                 </ul>
             <?php endif; ?>
         </section>
+
+        <!-- Modal para editar meta diária -->
+        <div class="modal fade" id="editMetaModal" tabindex="-1" aria-labelledby="editMetaLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editMetaLabel">Editar Meta Diária</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <?= Html::beginForm(['/gotinha'], 'post') ?>
+                    <div class="modal-body">
+                        <label for="nova-meta" class="form-label">Nova meta diária (ml)</label>
+                        <?= Html::input('number', 'nova_meta_ml', (string) $dailyGoalMl, [
+                            'class' => 'form-control',
+                            'id' => 'nova-meta',
+                            'min' => '500',
+                            'step' => '100',
+                            'required' => true,
+                        ]) ?>
+                        <small class="text-muted d-block mt-2">Valor recomendado: 2000 ml</small>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <?= Html::submitButton('Guardar Meta', ['class' => 'btn btn-primary']) ?>
+                    </div>
+                    <?= Html::endForm() ?>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

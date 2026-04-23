@@ -15,7 +15,7 @@ $this->title = 'Nutriweb - Procurar';
     </div>
 
     <div class="search-form-card">
-        <?= Html::beginForm(['procurar'], 'get', ['class' => 'search-form']) ?>
+        <?= Html::beginForm(['/procurar'], 'get', ['class' => 'search-form']) ?>
             <i class="bi bi-search search-icon"></i>
             <?= Html::textInput('q', $term, [
                 'class' => 'form-control search-input',
@@ -96,7 +96,7 @@ $this->title = 'Nutriweb - Procurar';
 
                         $username = trim((string) ($post['username'] ?? ''));
                         $displayName = $username !== '' ? $username : 'Utilizador';
-                        $postUrl = Url::to(['post-aberto', 'id' => (int) ($post['id'] ?? 0)]);
+                        $postUrl = Url::to(['/homepage/post-aberto', 'id' => (int) ($post['id'] ?? 0)]);
                         $content = trim((string) ($post['conteudo'] ?? ''));
                         $preview = mb_substr($content, 0, 120);
                         if (mb_strlen($content) > 120) {

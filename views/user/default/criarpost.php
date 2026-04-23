@@ -51,6 +51,8 @@ $this->beginPage();
                     ])->label(false) ?>
                 </div>
 
+                <div class="crop-hint" id="crop-hint" style="display:none;">Arrasta a imagem para ajustar o corte antes de publicar.</div>
+
                 <?= $form->field($post, 'titulo', ['template' => '{input}{error}'])->textInput([
                     'class' => 'post-titlearea',
                     'placeholder' => 'Insira o título...',
@@ -87,41 +89,271 @@ $this->beginPage();
 <?php
 $js = <<<JS
     (function () {
+        const form = document.getElementById('criar-post-form');
         const triggerUpload = document.getElementById('trigger-upload');
         const fileInput = document.getElementById('file-input');
         const imagePreview = document.getElementById('image-preview');
         const uploadIcon = document.getElementById('upload-icon');
         const previewCard = document.getElementById('main-preview-card');
+        const cropHint = document.getElementById('crop-hint');
         const nativeColorPicker = document.getElementById('native-color-picker');
         const postColorInput = document.querySelector('input[name="Post[CorPost]"]') || document.getElementById('post-corpost');
         const toolsArea = document.querySelector('.tools-area');
+
+        const cropState = {
+            file: null,
+            naturalWidth: 0,
+            naturalHeight: 0,
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            isDragging: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            dragOriginX: 0,
+            dragOriginY: 0,
+            isSubmitting: false,
+        };
 
         if (!previewCard || !toolsArea) {
             return;
         }
 
-        if (triggerUpload && fileInput) {
-            triggerUpload.addEventListener('click', function () {
-                fileInput.click();
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function getFrameSize() {
+            const rect = triggerUpload ? triggerUpload.getBoundingClientRect() : imagePreview.getBoundingClientRect();
+            return {
+                width: Math.max(1, rect.width),
+                height: Math.max(1, rect.height),
+            };
+        }
+
+        function updateImagePreview() {
+            if (!imagePreview || imagePreview.style.display === 'none' || !cropState.file) {
+                return;
+            }
+
+            const frame = getFrameSize();
+            const baseScale = Math.max(frame.width / cropState.naturalWidth, frame.height / cropState.naturalHeight);
+            const scale = baseScale * cropState.scale;
+            const drawWidth = cropState.naturalWidth * scale;
+            const drawHeight = cropState.naturalHeight * scale;
+            const overflowX = Math.max(0, drawWidth - frame.width);
+            const overflowY = Math.max(0, drawHeight - frame.height);
+
+            cropState.offsetX = clamp(cropState.offsetX, -overflowX / 2, overflowX / 2);
+            cropState.offsetY = clamp(cropState.offsetY, -overflowY / 2, overflowY / 2);
+
+            const left = (frame.width - drawWidth) / 2 + cropState.offsetX;
+            const top = (frame.height - drawHeight) / 2 + cropState.offsetY;
+
+            imagePreview.style.display = 'block';
+            imagePreview.style.width = drawWidth + 'px';
+            imagePreview.style.height = drawHeight + 'px';
+            imagePreview.style.left = left + 'px';
+            imagePreview.style.top = top + 'px';
+            imagePreview.style.cursor = cropState.isDragging ? 'grabbing' : 'grab';
+
+            if (uploadIcon) {
+                uploadIcon.style.display = 'none';
+            }
+
+            if (cropHint) {
+                cropHint.style.display = 'block';
+            }
+        }
+
+        function resetCropState() {
+            cropState.scale = 1;
+            cropState.offsetX = 0;
+            cropState.offsetY = 0;
+            cropState.isDragging = false;
+            cropState.dragStartX = 0;
+            cropState.dragStartY = 0;
+            cropState.dragOriginX = 0;
+            cropState.dragOriginY = 0;
+        }
+
+        function prepareCroppedFile() {
+            return new Promise(function (resolve, reject) {
+                if (!imagePreview || !cropState.file || !cropState.naturalWidth || !cropState.naturalHeight) {
+                    resolve();
+                    return;
+                }
+
+                const frame = getFrameSize();
+                const baseScale = Math.max(frame.width / cropState.naturalWidth, frame.height / cropState.naturalHeight);
+                const scale = baseScale * cropState.scale;
+                const drawWidth = cropState.naturalWidth * scale;
+                const drawHeight = cropState.naturalHeight * scale;
+                const left = (frame.width - drawWidth) / 2 + cropState.offsetX;
+                const top = (frame.height - drawHeight) / 2 + cropState.offsetY;
+                const sourceX = (-left) / scale;
+                const sourceY = (-top) / scale;
+                const sourceWidth = frame.width / scale;
+                const sourceHeight = frame.height / scale;
+                const canvas = document.createElement('canvas');
+                const outputWidth = Math.round(frame.width);
+                const outputHeight = Math.round(frame.height);
+                const context = canvas.getContext('2d');
+
+                if (!context) {
+                    resolve();
+                    return;
+                }
+
+                canvas.width = outputWidth;
+                canvas.height = outputHeight;
+
+                try {
+                    context.drawImage(imagePreview, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, outputWidth, outputHeight);
+                } catch (error) {
+                    reject(error);
+                    return;
+                }
+
+                const mimeType = cropState.file.type && cropState.file.type.indexOf('image/') === 0 ? cropState.file.type : 'image/jpeg';
+                const finalMimeType = mimeType === 'image/jpg' ? 'image/jpeg' : mimeType;
+
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        resolve();
+                        return;
+                    }
+
+                    const extension = finalMimeType === 'image/png' ? 'png' : finalMimeType === 'image/webp' ? 'webp' : 'jpg';
+                    const baseName = cropState.file.name.replace(/\.[^.]+$/, '');
+                    const croppedFile = new File([blob], baseName + '-crop.' + extension, {
+                        type: finalMimeType,
+                        lastModified: Date.now(),
+                    });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(croppedFile);
+                    fileInput.files = dataTransfer.files;
+                    resolve();
+                }, finalMimeType, finalMimeType === 'image/png' ? undefined : 0.92);
             });
         }
+
+        function startDrag(event) {
+            if (!cropState.file) {
+                return;
+            }
+
+            cropState.isDragging = true;
+            cropState.dragStartX = event.clientX;
+            cropState.dragStartY = event.clientY;
+            cropState.dragOriginX = cropState.offsetX;
+            cropState.dragOriginY = cropState.offsetY;
+
+            if (imagePreview.setPointerCapture) {
+                try {
+                    imagePreview.setPointerCapture(event.pointerId);
+                } catch (pointerError) {
+                    // Ignore pointer capture failures and keep dragging with the window listeners.
+                }
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        function moveDrag(event) {
+            if (!cropState.isDragging || !cropState.file) {
+                return;
+            }
+
+            const deltaX = event.clientX - cropState.dragStartX;
+            const deltaY = event.clientY - cropState.dragStartY;
+            cropState.offsetX = cropState.dragOriginX + deltaX;
+            cropState.offsetY = cropState.dragOriginY + deltaY;
+            updateImagePreview();
+        }
+
+        function endDrag() {
+            if (!cropState.isDragging) {
+                return;
+            }
+
+            cropState.isDragging = false;
+            updateImagePreview();
+        }
+
+        if (triggerUpload && fileInput) {
+            triggerUpload.addEventListener('click', function () {
+                if (!cropState.file) {
+                    fileInput.click();
+                }
+            });
+        }
+
+        if (imagePreview) {
+            imagePreview.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+
+            imagePreview.addEventListener('pointerdown', startDrag);
+        }
+
+        window.addEventListener('pointermove', moveDrag);
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+        window.addEventListener('resize', updateImagePreview);
 
         if (fileInput) {
             fileInput.addEventListener('change', function (e) {
                 const file = e.target.files && e.target.files[0];
                 if (!file || !imagePreview) {
+                    cropState.file = null;
+                    if (cropHint) {
+                        cropHint.style.display = 'none';
+                    }
                     return;
                 }
 
+                cropState.file = file;
+                resetCropState();
+
                 const reader = new FileReader();
                 reader.onload = function (event) {
+                    imagePreview.onload = function () {
+                        cropState.naturalWidth = imagePreview.naturalWidth || 0;
+                        cropState.naturalHeight = imagePreview.naturalHeight || 0;
+                        updateImagePreview();
+                    };
+
                     imagePreview.src = event.target.result;
                     imagePreview.style.display = 'block';
                     if (uploadIcon) {
                         uploadIcon.style.display = 'none';
                     }
+                    if (cropHint) {
+                        cropHint.style.display = 'block';
+                    }
                 };
                 reader.readAsDataURL(file);
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', async function (event) {
+                if (!cropState.file || cropState.isSubmitting) {
+                    return;
+                }
+
+                event.preventDefault();
+                cropState.isSubmitting = true;
+
+                try {
+                    await prepareCroppedFile();
+                    HTMLFormElement.prototype.submit.call(form);
+                } catch (error) {
+                    cropState.isSubmitting = false;
+                    form.submit();
+                }
             });
         }
 

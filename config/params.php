@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'adminEmail' => 'admin@example.com',
-    'senderEmail' => 'noreply@example.com',
-    'senderName' => 'Example.com mailer',
+    'adminEmail' => 'nutriweb.support@gmail.com', // MUDE PARA SEU EMAIL
+    'senderEmail' => 'nutriweb.support@gmail.com', // MUDE PARA SEU EMAIL
+    'senderName' => 'NutriWeb - Suporte',
 ];

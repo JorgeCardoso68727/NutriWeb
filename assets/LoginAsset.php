@@ -24,7 +24,7 @@ class LoginAsset extends AssetBundle
         'css/site.css',
         'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
-        'css/login.css',
+        'css/Login.css',
         'css/model.css',
     ];
     public $js = [];

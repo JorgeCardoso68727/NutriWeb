@@ -3,24 +3,18 @@
 namespace app\controllers;
 
 use app\models\Post;
-use app\models\BadgePedido;
-use app\models\Agua;
-use app\models\Mensagem;
-use app\models\Seguidor;
 use app\models\User;
+use yii\models\Perfil;
 use app\models\LoginForm;
 use Yii;
 use yii\db\Query;
 use yii\web\Controller;
-use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
-use yii\web\UploadedFile;
-use yii\helpers\FileHelper;
-use yii\helpers\Url;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\widgets\ActiveForm;
+
 
 /**
  * Default controller for User module
@@ -48,14 +42,14 @@ class MyDefaultController extends Controller
                         'roles' => ['?', '@'],
                     ],
                     [
-                        'actions' => ['account', 'perfil', 'editar-perfil', 'resend-change', 'cancel', 'inicio', 'post-aberto', 'remove-post', 'feed', 'mensagens', 'mensagens-updates', 'gotinha', 'procurar', 'criarpost', 'toggle-follow', 'toggle-like', 'badge', 'badge-review'],
+                        'actions' => ['account', 'resend-change', 'cancel'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
                     [
                         'actions' => ['login', 'register', 'forgot', 'reset', 'login-email', 'login-callback'],
                         'allow' => true,
-                        'roles' => ['?'],
+                        'roles' => ['?', '@'],
                     ],
                 ],
             ],
@@ -63,11 +57,6 @@ class MyDefaultController extends Controller
                 'class' => VerbFilter::className(),
                 'actions' => [
                     'logout' => ['post'],
-                    'mensagens-updates' => ['get'],
-                    'toggle-follow' => ['post'],
-                    'toggle-like' => ['post'],
-                    'remove-post' => ['post'],
-                    'badge-review' => ['post'],
                 ],
             ],
         ];
@@ -78,14 +67,18 @@ class MyDefaultController extends Controller
      */
     public function actionIndex()
     {
-        if (defined('YII_DEBUG') && YII_DEBUG) {
-            $actions = $this->module->getActions();
-            return $this->render('index', ['actions' => $actions]);
+        if (!Yii::$app->user->isGuest) {
+            return $this->redirect(['/inicio']);
         }
 
-        return $this->render('index', [
-            'isGuest' => Yii::$app->user->isGuest,
-        ]);
+        if (defined('YII_DEBUG') && YII_DEBUG) {
+            $actions = $this->module->getActions();
+            return $this->render('index', ["actions" => $actions]);
+        } elseif (Yii::$app->user->isGuest) {
+            return $this->redirect(["/user/login"]);
+        } else {
+            return $this->redirect(["/user/account"]);
+        }
     }
 
     /**
@@ -93,17 +86,40 @@ class MyDefaultController extends Controller
      */
     public function actionLogin()
     {
-        /** @var \amnah\yii2\user\models\forms\LoginForm $model */
-        $model = $this->module->model('LoginForm');
-
-        $post = Yii::$app->request->post();
-        if ($model->load($post) && $model->validate()) {
-            $returnUrl = $this->performLogin($model->getUser(), $model->rememberMe);
-            return $this->redirect($returnUrl);
+        if (!Yii::$app->user->isGuest) {
+            return $this->redirect(['/inicio']);
         }
 
-        return $this->render('login', compact('model'));
+        /** @var \app\models\LoginForm $model */
+        $model = new LoginForm();
+
+        // load post data and login
+        $post = Yii::$app->request->post();
+        if ($model->load($post) && $model->validate()) {
+            $this->performLogin($model->getUser(), $model->rememberMe);
+            return $this->redirect(['/inicio']);
+        }
+
+        return $this->render('login', compact("model"));
     }
+
+    /**
+     * Log user out and redirect
+     */
+    public function actionLogout()
+    {
+        Yii::$app->user->logout();
+
+        // handle redirect
+        $logoutRedirect = $this->module->logoutRedirect;
+        if ($logoutRedirect) {
+            return $this->redirect($logoutRedirect);
+        }
+        return $this->goHome();
+    }
+
+
+//Nao usados por agora;
 
     /**
      * Login/register via email
@@ -111,17 +127,19 @@ class MyDefaultController extends Controller
     public function actionLoginEmail()
     {
         /** @var \amnah\yii2\user\models\forms\LoginEmailForm $loginEmailForm */
-        $loginEmailForm = $this->module->model('LoginEmailForm');
+        //$loginEmailForm = $this->module->model("LoginEmailForm");
+        $loginEmailForm = new $loginEmailForm();
 
+        // load post data and validate
         $post = Yii::$app->request->post();
         if ($loginEmailForm->load($post) && $loginEmailForm->sendEmail()) {
             $user = $loginEmailForm->getUser();
-            $message = $user ? 'Login link sent' : 'Registration link sent';
-            $message .= ' - Please check your email';
-            Yii::$app->session->setFlash('Login-success', Yii::t('user', $message));
+            $message = $user ? "Login link sent" : "Registration link sent";
+            $message .= " - Please check your email";
+            Yii::$app->session->setFlash("Login-success", Yii::t("user", $message));
         }
 
-        return $this->render('loginEmail', compact('loginEmailForm'));
+        return $this->render("loginEmail", compact("loginEmailForm"));
     }
 
     /**
@@ -192,20 +210,7 @@ class MyDefaultController extends Controller
         return $returnUrl;
     }
 
-    /**
-     * Log user out and redirect
-     */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
 
-        // handle redirect
-        $logoutRedirect = $this->module->logoutRedirect;
-        if ($logoutRedirect) {
-            return $this->redirect($logoutRedirect);
-        }
-        return $this->goHome();
-    }
 
     /**
      * Display registration page
@@ -216,7 +221,10 @@ class MyDefaultController extends Controller
         /** @var \app\models\Perfil $profile */
         /** @var \amnah\yii2\user\models\Role $role */
 
-        // set up new user/profile objects
+        //o que estas linhas fazem? --- IGNORE ---
+        // 1. Cria uma instância do modelo User com o cenário "register" para validação específica de registro.
+        // 2. Cria uma instância do modelo Perfil para armazenar informações adicionais do
+
         $user = $this->module->model("User", ["scenario" => "register"]);
         $profile = $this->module->model("Profile");
 
@@ -379,182 +387,6 @@ class MyDefaultController extends Controller
     }
 
     /**
-     * Profile
-     */
-    public function actionPerfil()
-    {
-        $username = Yii::$app->user->identity->username;
-        return $this->redirect('/' . $username);
-    }
-
-    public function actionPublicProfile($username = null)
-    {
-        if ($username === null && !Yii::$app->user->isGuest) {
-            $username = Yii::$app->user->identity->username;
-        }
-
-        if ($username === null || trim((string) $username) === '') {
-            throw new NotFoundHttpException('Perfil nao encontrado.');
-        }
-
-        $userClass = $this->module->model("User");
-        $profileClass = $this->module->model("Profile");
-
-        $viewUser = (new \yii\db\Query())
-            ->from($userClass::tableName())
-            ->where(['username' => $username])
-            ->one();
-        if ($viewUser === null) {
-            throw new NotFoundHttpException('Perfil nao encontrado.');
-        }
-        $viewUser = (object) $viewUser;
-
-        $profile = (new \yii\db\Query())
-            ->from($profileClass::tableName())
-            ->where(['user_id' => $viewUser->id])
-            ->one();
-        if ($profile === null) {
-            $profile = new $profileClass();
-            $profile->setAttributes([
-                'Frist_Name' => '',
-                'Last_Name' => '',
-                'Bio' => '',
-                'Foto' => '',
-            ], false);
-        } else {
-            $profile = (object) $profile;
-        }
-
-        $viewUserId = (int) $viewUser->id;
-        $isOwnProfile = !Yii::$app->user->isGuest && (int) Yii::$app->user->id === $viewUserId;
-        $posts = Post::find()
-            ->where(['user_id' => $viewUserId])
-            ->orderBy(['data_criacao' => SORT_DESC, 'id' => SORT_DESC])
-            ->all();
-        $publicationCount = (int) (new \yii\db\Query())
-            ->from(Post::tableName())
-            ->where(['user_id' => $viewUserId])
-            ->count();
-        $followersCount = Seguidor::countFollowers($viewUserId);
-        $followingCount = Seguidor::countFollowing($viewUserId);
-        $isFollowing = !Yii::$app->user->isGuest && Seguidor::isFollowing((int) Yii::$app->user->id, $viewUserId);
-        $userTable = $userClass::tableName();
-
-        $followersList = (new \yii\db\Query())
-            ->select(['u.id', 'u.username'])
-            ->from(['s' => Seguidor::tableName()])
-            ->innerJoin(['u' => $userTable], 'u.id = s.seguidor_id')
-            ->where(['s.seguido_id' => (int) $viewUser->id])
-            ->orderBy(['u.username' => SORT_ASC])
-            ->all();
-
-        $followingList = (new \yii\db\Query())
-            ->select(['u.id', 'u.username'])
-            ->from(['s' => Seguidor::tableName()])
-            ->innerJoin(['u' => $userTable], 'u.id = s.seguido_id')
-            ->where(['s.seguidor_id' => (int) $viewUser->id])
-            ->orderBy(['u.username' => SORT_ASC])
-            ->all();
-
-        return $this->render('perfil', [
-            'viewUser' => $viewUser,
-            'profile' => $profile,
-            'isOwnProfile' => $isOwnProfile,
-            'posts' => $posts,
-            'publicationCount' => $publicationCount,
-            'followersCount' => $followersCount,
-            'followingCount' => $followingCount,
-            'isFollowing' => $isFollowing,
-            'followersList' => $followersList,
-            'followingList' => $followingList,
-        ]);
-    }
-
-    public function actionToggleFollow($username)
-    {
-        $userClass = $this->module->model("User");
-        $targetUser = (new \yii\db\Query())
-            ->from($userClass::tableName())
-            ->where(['username' => $username])
-            ->one();
-
-        if ($targetUser === null) {
-            throw new NotFoundHttpException('Perfil nao encontrado.');
-        }
-
-        $targetUser = (object) $targetUser;
-
-        $seguidorId = (int) Yii::$app->user->id;
-        $seguidoId = (int) $targetUser->id;
-
-        if ($seguidorId !== $seguidoId) {
-            if (Seguidor::isFollowing($seguidorId, $seguidoId)) {
-                Seguidor::unfollow($seguidorId, $seguidoId);
-            } else {
-                Seguidor::follow($seguidorId, $seguidoId);
-            }
-        }
-
-        return $this->redirect('/' . $targetUser->username);
-    }
-
-    public function actionEditarPerfil()
-    {
-        $profile = Yii::$app->user->identity->profile;
-
-        if (!$profile) {
-            $profile = $this->module->model("Profile");
-            $profile->setUser(Yii::$app->user->id);
-        }
-
-        $oldPhotoPath = $profile->Foto;
-
-        if ($profile->load(Yii::$app->request->post()) && $profile->validate()) {
-            $uploadedPhoto = UploadedFile::getInstanceByName('profilePhoto');
-
-            if ($uploadedPhoto) {
-                $uploadDir = Yii::getAlias('@webroot/uploads/profile');
-                FileHelper::createDirectory($uploadDir);
-
-                $safeBaseName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($uploadedPhoto->name, PATHINFO_FILENAME));
-                $safeBaseName = $safeBaseName ?: 'foto';
-                $fileName = Yii::$app->user->id . '_' . time() . '_' . $safeBaseName . '.' . $uploadedPhoto->extension;
-                $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-
-                if ($uploadedPhoto->saveAs($fullPath)) {
-                    $profile->Foto = 'uploads/profile/' . $fileName;
-                } else {
-                    $profile->Foto = $oldPhotoPath;
-                    Yii::$app->session->setFlash('Profile-error', 'Nao foi possivel guardar a foto.');
-                    return $this->render("editar-perfil", [
-                        'profile' => $profile,
-                        'user' => Yii::$app->user->identity,
-                    ]);
-                }
-            } else {
-                $profile->Foto = $oldPhotoPath;
-            }
-
-            $updated = \app\models\Perfil::updateAll([
-                'Frist_Name' => $profile->Frist_Name,
-                'Last_Name' => $profile->Last_Name,
-                'Bio' => $profile->Bio,
-                'Foto' => $profile->Foto,
-            ], ['id' => $profile->id]);
-
-            if ($updated) {
-                Yii::$app->session->setFlash("Profile-success", Yii::t("user", "Perfil atualizado"));
-                return $this->redirect('/' . Yii::$app->user->identity->username);
-            }
-        }
-
-        return $this->render("editar-perfil", [
-            'profile' => $profile,
-            'user' => Yii::$app->user->identity,
-        ]);
-    }
-
-    /**
      * Resend email confirmation
      */
     public function actionResend()
@@ -618,20 +450,48 @@ class MyDefaultController extends Controller
     /**
      * Forgot password
      */
-    public function actionForgot()
+    public function actionForgot($token = null)
     {
         /** @var \amnah\yii2\user\models\forms\ForgotForm $model */
+        /** @var \amnah\yii2\user\models\User $user */
+        /** @var \amnah\yii2\user\models\UserToken $userToken */
 
-        // load post data and send email
         $model = $this->module->model("ForgotForm");
-        if ($model->load(Yii::$app->request->post()) && $model->sendForgotEmail()) {
+        $user = null;
+        $userToken = null;
+        $success = false;
+        $invalidToken = false;
 
-            // set flash (which will show on the current page)
-            Yii::$app->session->setFlash("Forgot-success", Yii::t("user", "Instructions to reset your password have been sent"));
-            return $this->refresh();
+        if ($token) {
+            $userTokenClass = $this->module->model("UserToken");
+            $userToken = $userTokenClass::findByToken($token, $userTokenClass::TYPE_PASSWORD_RESET);
+            if ($userToken) {
+                $userClass = $this->module->model("User");
+                $user = $userClass::findOne($userToken->user_id);
+                if ($user) {
+                    $user->setScenario("reset");
+                } else {
+                    $invalidToken = true;
+                }
+            } else {
+                $invalidToken = true;
+            }
         }
 
-        return $this->render("forgot", compact("model"));
+        if (Yii::$app->request->isPost) {
+            if ($token && $user && $user->load(Yii::$app->request->post()) && $user->save()) {
+                $userToken->delete();
+                Yii::$app->session->setFlash("success", Yii::t("user", "Password has been reset"));
+                return $this->redirect(["/user/login"]);
+            } elseif (!$token && $model->load(Yii::$app->request->post()) && $model->sendForgotEmail()) {
+
+                // set flash (which will show on the current page)
+                Yii::$app->session->setFlash("Forgot-success", Yii::t("user", "As instruções para redefinir a senha foram enviadas para o seu email"));
+                return $this->refresh();
+            }
+        }
+
+        return $this->render("forgot", compact("model", "user", "userToken", "success", "invalidToken", "token"));
     }
 
     /**
@@ -639,1094 +499,6 @@ class MyDefaultController extends Controller
      */
     public function actionReset($token)
     {
-        /** @var \amnah\yii2\user\models\User $user */
-        /** @var \amnah\yii2\user\models\UserToken $userToken */
-
-        // get user token and check expiration
-        $userToken = $this->module->model("UserToken");
-        $userToken = $userToken::findByToken($token, $userToken::TYPE_PASSWORD_RESET);
-        if (!$userToken) {
-            return $this->render('reset', ["invalidToken" => true]);
-        }
-
-        // get user and set "reset" scenario
-        $success = false;
-        $user = $this->module->model("User");
-        $user = $user::findOne($userToken->user_id);
-        $user->setScenario("reset");
-
-        // load post data and reset user password
-        if ($user->load(Yii::$app->request->post()) && $user->save()) {
-
-            // delete userToken and set success = true
-            $userToken->delete();
-            $success = true;
-        }
-
-        return $this->render('reset', compact("user", "success"));
-    }
-
-    public function actionInicio()
-    {
-        $posts = (new Query())
-            ->select([
-                'p.id',
-                'p.titulo',
-                'p.imagem',
-                'p.data_criacao',
-                'p.CorPost',
-                'p.user_id',
-                'u.username',
-                'pr.Foto AS profile_photo',
-            ])
-            ->from(['p' => 'post'])
-            ->innerJoin(['u' => 'user'], 'u.id = p.user_id')
-            ->leftJoin(['pr' => 'perfil'], 'pr.user_id = p.user_id')
-            ->where(['u.role_id' => 3])
-            ->orderBy(['p.data_criacao' => SORT_DESC, 'p.id' => SORT_DESC])
-            ->all();
-
-        $postIds = array_map('intval', array_column($posts, 'id'));
-        $likedPostIds = [];
-        $likeCountByPost = [];
-
-        if (!empty($postIds)) {
-            $likeTotals = (new Query())
-                ->select([
-                    'id_post',
-                    'total' => 'COUNT(*)',
-                ])
-                ->from(['l' => 'likes'])
-                ->where(['l.id_post' => $postIds])
-                ->groupBy(['l.id_post'])
-                ->all();
-
-            foreach ($likeTotals as $row) {
-                $likeCountByPost[(int) $row['id_post']] = (int) $row['total'];
-            }
-
-            if (!Yii::$app->user->isGuest) {
-                $userLikedPostIds = (new Query())
-                    ->select(['l.id_post'])
-                    ->from(['l' => 'likes'])
-                    ->where([
-                        'l.id_user' => (int) Yii::$app->user->id,
-                        'l.id_post' => $postIds,
-                    ])
-                    ->column();
-
-                $likedPostIds = array_fill_keys(array_map('intval', $userLikedPostIds), true);
-            }
-        }
-
-        $nutritionists = (new Query())
-            ->select([
-                'u.id',
-                'u.username',
-                'pr.Frist_Name',
-                'pr.Last_Name',
-                'pr.Bio',
-                'pr.Telefone',
-                'pr.Foto AS profile_photo',
-            ])
-            ->from(['u' => 'user'])
-            ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
-            ->where(['u.role_id' => 3])
-            ->orderBy(['u.id' => SORT_DESC])
-            ->limit(6)
-            ->all();
-
-        return $this->render('Inicio', [
-            'posts' => $posts,
-            'likedPostIds' => $likedPostIds,
-            'likeCountByPost' => $likeCountByPost,
-            'nutritionists' => $nutritionists,
-        ]);
-    }
-
-    public function actionToggleLike($postId)
-    {
-        $postId = (int) $postId;
-        $userId = (int) Yii::$app->user->id;
-        $isAjaxRequest = Yii::$app->request->isAjax;
-
-        $postExists = (new Query())
-            ->from(['p' => 'post'])
-            ->where(['p.id' => $postId])
-            ->exists();
-
-        if (!$postExists) {
-            if ($isAjaxRequest) {
-                Yii::$app->response->format = Response::FORMAT_JSON;
-                Yii::$app->response->statusCode = 404;
-                return [
-                    'success' => false,
-                    'message' => 'Post nao encontrado.',
-                ];
-            }
-
-            throw new NotFoundHttpException('Post nao encontrado.');
-        }
-
-        $alreadyLiked = (new Query())
-            ->from(['l' => 'likes'])
-            ->where([
-                'l.id_post' => $postId,
-                'l.id_user' => $userId,
-            ])
-            ->exists();
-
-        if ($alreadyLiked) {
-            Yii::$app->db->createCommand()->delete('{{%likes}}', [
-                'id_post' => $postId,
-                'id_user' => $userId,
-            ])->execute();
-            $liked = false;
-        } else {
-            Yii::$app->db->createCommand()->insert('{{%likes}}', [
-                'id_post' => $postId,
-                'id_user' => $userId,
-            ])->execute();
-            $liked = true;
-        }
-
-        $likeCount = (int) (new Query())
-            ->from(['l' => 'likes'])
-            ->where(['l.id_post' => $postId])
-            ->count();
-
-        if ($isAjaxRequest) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-            return [
-                'success' => true,
-                'liked' => $liked,
-                'likeCount' => $likeCount,
-            ];
-        }
-
-        return $this->redirect(Yii::$app->request->referrer ?: ['inicio']);
-    }
-
-    public function actionPostAberto($id)
-    {
-        $postId = (int) $id;
-
-        $post = (new Query())
-            ->select([
-                'p.id',
-                'p.titulo',
-                'p.conteudo',
-                'p.imagem',
-                'p.data_criacao',
-                'p.CorPost',
-                'p.user_id',
-                'u.username',
-                'pr.Foto AS profile_photo',
-            ])
-            ->from(['p' => 'post'])
-            ->leftJoin(['u' => 'user'], 'u.id = p.user_id')
-            ->leftJoin(['pr' => 'perfil'], 'pr.user_id = p.user_id')
-            ->where(['p.id' => $postId])
-            ->one();
-
-        if (!$post) {
-            throw new NotFoundHttpException('Post nao encontrado.');
-        }
-
-        $hasLiked = false;
-        if (!Yii::$app->user->isGuest) {
-            $hasLiked = (new Query())
-                ->from(['l' => 'likes'])
-                ->where([
-                    'l.id_post' => $postId,
-                    'l.id_user' => (int) Yii::$app->user->id,
-                ])
-                ->exists();
-        }
-
-        $likeCount = (int) (new Query())
-            ->from(['l' => 'likes'])
-            ->where(['l.id_post' => $postId])
-            ->count();
-
-        $currentUserId = (int) Yii::$app->user->id;
-        $isOwner = $currentUserId > 0 && $currentUserId === (int) $post['user_id'];
-        $isAdmin = $this->isCurrentUserAdmin();
-        $canRemove = $isOwner || $isAdmin;
-        $canReport = !$canRemove;
-
-        return $this->render('PostAberto', [
-            'post' => $post,
-            'hasLiked' => $hasLiked,
-            'likeCount' => $likeCount,
-            'canRemove' => $canRemove,
-            'canReport' => $canReport,
-        ]);
-    }
-
-    public function actionRemovePost($id)
-    {
-        $postId = (int) $id;
-        $post = Post::findOne($postId);
-
-        if ($post === null) {
-            throw new NotFoundHttpException('Post nao encontrado.');
-        }
-
-        $currentUserId = (int) Yii::$app->user->id;
-        $isOwner = $currentUserId > 0 && $currentUserId === (int) $post->user_id;
-        $isAdmin = $this->isCurrentUserAdmin();
-
-        if (!$isOwner && !$isAdmin) {
-            throw new ForbiddenHttpException('Nao tens permissao para remover este post.');
-        }
-
-        $imagePath = trim((string) $post->imagem);
-        $fullImagePath = $imagePath !== '' ? Yii::getAlias('@webroot/' . ltrim($imagePath, '/')) : '';
-
-        Yii::$app->db->createCommand()->delete('{{%likes}}', ['id_post' => $postId])->execute();
-        $post->delete();
-
-        if ($fullImagePath !== '' && is_file($fullImagePath)) {
-            @unlink($fullImagePath);
-        }
-
-        Yii::$app->session->setFlash('Post-success', 'Post removido com sucesso.');
-        return $this->redirect(['inicio']);
-    }
-
-    public function actionFeed()
-    {
-        $userId = (int) Yii::$app->user->id;
-
-        $posts = (new Query())
-            ->select([
-                'p.id',
-                'p.titulo',
-                'p.imagem',
-                'p.data_criacao',
-                'p.CorPost',
-                'p.user_id',
-                'u.username',
-                'pr.Foto AS profile_photo',
-            ])
-            ->from(['p' => 'post'])
-            ->innerJoin(['u' => 'user'], 'u.id = p.user_id')
-            ->leftJoin(['pr' => 'perfil'], 'pr.user_id = p.user_id')
-            ->orderBy(['p.data_criacao' => SORT_DESC, 'p.id' => SORT_DESC])
-            ->all();
-
-        $postIds = array_map('intval', array_column($posts, 'id'));
-        $likedPostIds = [];
-        $likeCountByPost = [];
-
-        if (!empty($postIds)) {
-            $likeTotals = (new Query())
-                ->select([
-                    'id_post',
-                    'total' => 'COUNT(*)',
-                ])
-                ->from(['l' => 'likes'])
-                ->where(['l.id_post' => $postIds])
-                ->groupBy(['l.id_post'])
-                ->all();
-
-            foreach ($likeTotals as $row) {
-                $likeCountByPost[(int) $row['id_post']] = (int) $row['total'];
-            }
-
-            $userLikedPostIds = (new Query())
-                ->select(['l.id_post'])
-                ->from(['l' => 'likes'])
-                ->where([
-                    'l.id_user' => $userId,
-                    'l.id_post' => $postIds,
-                ])
-                ->column();
-
-            $likedPostIds = array_fill_keys(array_map('intval', $userLikedPostIds), true);
-        }
-
-        return $this->render('feed', [
-            'posts' => $posts,
-            'likedPostIds' => $likedPostIds,
-            'likeCountByPost' => $likeCountByPost,
-        ]);
-    }
-
-    public function actionMensagens()
-    {
-        $currentUserId = (int) Yii::$app->user->id;
-        $withUsername = trim((string) Yii::$app->request->get('with', ''));
-        $userSearchTerm = trim((string) Yii::$app->request->get('u', ''));
-
-        if (Yii::$app->request->isPost) {
-            $isAjaxRequest = Yii::$app->request->isAjax;
-            $targetUserId = (int) Yii::$app->request->post('target_user_id', 0);
-            $messageText = trim((string) Yii::$app->request->post('conteudo', ''));
-            $messageAttachment = UploadedFile::getInstanceByName('anexo');
-
-            if ($messageAttachment !== null && $messageAttachment->error === UPLOAD_ERR_NO_FILE) {
-                $messageAttachment = null;
-            }
-
-            if ($messageAttachment !== null) {
-                $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                $attachmentExtension = strtolower((string) $messageAttachment->extension);
-                if (!in_array($attachmentExtension, $allowedExtensions, true)) {
-                    if ($isAjaxRequest) {
-                        Yii::$app->response->format = Response::FORMAT_JSON;
-                        Yii::$app->response->statusCode = 400;
-                        return ['success' => false, 'message' => 'Apenas imagens sao permitidas.'];
-                    }
-
-                    Yii::$app->session->setFlash('Mensagem-error', 'Apenas imagens sao permitidas.');
-                    return $this->redirect(['mensagens']);
-                }
-            }
-
-            if ($targetUserId <= 0 || $targetUserId === $currentUserId) {
-                if ($isAjaxRequest) {
-                    Yii::$app->response->format = Response::FORMAT_JSON;
-                    Yii::$app->response->statusCode = 400;
-                    return ['success' => false, 'message' => 'Destino de mensagem invalido.'];
-                }
-                Yii::$app->session->setFlash('Mensagem-error', 'Destino de mensagem invalido.');
-                return $this->redirect(['mensagens']);
-            }
-
-            if ($messageText === '' && $messageAttachment === null) {
-                $targetUsername = (string) (new Query())
-                    ->select(['u.username'])
-                    ->from(['u' => 'user'])
-                    ->where(['u.id' => $targetUserId])
-                    ->scalar();
-
-                if ($isAjaxRequest) {
-                    Yii::$app->response->format = Response::FORMAT_JSON;
-                    Yii::$app->response->statusCode = 400;
-                    return ['success' => false, 'message' => 'A mensagem nao pode estar vazia.'];
-                }
-                Yii::$app->session->setFlash('Mensagem-error', 'A mensagem nao pode estar vazia.');
-                return $this->redirect(['mensagens', 'with' => $targetUsername]);
-            }
-
-            $targetExists = (new Query())
-                ->from(['u' => 'user'])
-                ->where(['u.id' => $targetUserId])
-                ->exists();
-            if (!$targetExists) {
-                if ($isAjaxRequest) {
-                    Yii::$app->response->format = Response::FORMAT_JSON;
-                    Yii::$app->response->statusCode = 404;
-                    return ['success' => false, 'message' => 'Utilizador nao encontrado.'];
-                }
-                Yii::$app->session->setFlash('Mensagem-error', 'Utilizador nao encontrado.');
-                return $this->redirect(['mensagens']);
-            }
-
-            $message = new Mensagem();
-            $message->remetente_id = $currentUserId;
-            $message->destinatario_id = $targetUserId;
-            $message->conteudo = $messageText;
-            $message->lida = 0;
-
-            if ($messageAttachment !== null) {
-                $uploadDir = Yii::getAlias('@webroot/uploads/messages');
-                FileHelper::createDirectory($uploadDir);
-
-                $safeBaseName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($messageAttachment->name, PATHINFO_FILENAME));
-                $safeBaseName = $safeBaseName ?: 'anexo';
-                $fileName = $currentUserId . '_' . time() . '_' . $safeBaseName . '.' . $messageAttachment->extension;
-                $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-
-                if ($messageAttachment->saveAs($fullPath)) {
-                    $message->anexo = 'uploads/messages/' . $fileName;
-                } else {
-                    if ($isAjaxRequest) {
-                        Yii::$app->response->format = Response::FORMAT_JSON;
-                        Yii::$app->response->statusCode = 500;
-                        return ['success' => false, 'message' => 'Nao foi possivel guardar o anexo.'];
-                    }
-
-                    Yii::$app->session->setFlash('Mensagem-error', 'Nao foi possivel guardar o anexo.');
-                    return $this->redirect(['mensagens', 'with' => (string) (new Query())->select(['u.username'])->from(['u' => 'user'])->where(['u.id' => $targetUserId])->scalar()]);
-                }
-            }
-
-            if ($message->save(false)) {
-                $targetUsername = (string) (new Query())
-                    ->select(['u.username'])
-                    ->from(['u' => 'user'])
-                    ->where(['u.id' => $targetUserId])
-                    ->scalar();
-
-                if ($isAjaxRequest) {
-                    Yii::$app->response->format = Response::FORMAT_JSON;
-                    return [
-                        'success' => true,
-                        'with' => $targetUsername,
-                    ];
-                }
-
-                return $this->redirect(['mensagens', 'with' => $targetUsername]);
-            }
-
-            if ($isAjaxRequest) {
-                Yii::$app->response->format = Response::FORMAT_JSON;
-                Yii::$app->response->statusCode = 500;
-                return ['success' => false, 'message' => 'Nao foi possivel enviar a mensagem.'];
-            }
-
-            Yii::$app->session->setFlash('Mensagem-error', 'Nao foi possivel enviar a mensagem.');
-            return $this->redirect(['mensagens']);
-        }
-
-        $conversationRows = Yii::$app->db->createCommand(
-            'SELECT
-                CASE WHEN m.remetente_id = :uid THEN m.destinatario_id ELSE m.remetente_id END AS other_user_id,
-                MAX(m.data_envio) AS last_message_at,
-                SUM(CASE WHEN m.destinatario_id = :uid AND m.lida = 0 THEN 1 ELSE 0 END) AS unread_count
-             FROM mensagem m
-             WHERE m.remetente_id = :uid OR m.destinatario_id = :uid
-             GROUP BY other_user_id
-             ORDER BY last_message_at DESC',
-            [':uid' => $currentUserId]
-        )->queryAll();
-
-        $conversationUserIds = array_values(array_unique(array_map(static function ($row) {
-            return (int) ($row['other_user_id'] ?? 0);
-        }, $conversationRows)));
-        $conversationUserIds = array_filter($conversationUserIds, static function ($id) {
-            return $id > 0;
-        });
-
-        $conversationMetaByUserId = [];
-        foreach ($conversationRows as $row) {
-            $otherId = (int) ($row['other_user_id'] ?? 0);
-            if ($otherId <= 0) {
-                continue;
-            }
-            $conversationMetaByUserId[$otherId] = [
-                'last_message_at' => (string) ($row['last_message_at'] ?? ''),
-                'last_message_preview' => '',
-                'unread_count' => (int) ($row['unread_count'] ?? 0),
-            ];
-        }
-
-        if (!empty($conversationUserIds)) {
-            foreach ($conversationUserIds as $otherId) {
-                $latestMessage = (new Query())
-                    ->select(['m.conteudo', 'm.anexo'])
-                    ->from(['m' => 'mensagem'])
-                    ->where([
-                        'or',
-                        ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $otherId]],
-                        ['and', ['m.remetente_id' => $otherId], ['m.destinatario_id' => $currentUserId]],
-                    ])
-                    ->orderBy(['m.data_envio' => SORT_DESC, 'm.id' => SORT_DESC])
-                    ->limit(1)
-                    ->one();
-
-                if ($latestMessage !== false && isset($conversationMetaByUserId[$otherId])) {
-                    $conversationMetaByUserId[$otherId]['last_message_preview'] = $this->buildMessagePreview($latestMessage);
-                }
-            }
-        }
-
-        $conversationUsers = [];
-        if (!empty($conversationUserIds)) {
-            $conversationUsers = (new Query())
-                ->select([
-                    'u.id',
-                    'u.username',
-                    'pr.Frist_Name',
-                    'pr.Last_Name',
-                    'pr.Foto AS profile_photo',
-                ])
-                ->from(['u' => 'user'])
-                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
-                ->where(['u.id' => $conversationUserIds])
-                ->all();
-
-            usort($conversationUsers, static function ($a, $b) use ($conversationMetaByUserId) {
-                $aTs = (string) ($conversationMetaByUserId[(int) $a['id']]['last_message_at'] ?? '');
-                $bTs = (string) ($conversationMetaByUserId[(int) $b['id']]['last_message_at'] ?? '');
-                return strcmp($bTs, $aTs);
-            });
-        }
-
-        $selectedUser = null;
-        if ($withUsername !== '') {
-            $selectedUser = (new Query())
-                ->select([
-                    'u.id',
-                    'u.username',
-                    'pr.Frist_Name',
-                    'pr.Last_Name',
-                    'pr.Foto AS profile_photo',
-                ])
-                ->from(['u' => 'user'])
-                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
-                ->where([
-                    'and',
-                    ['u.username' => $withUsername],
-                    ['<>', 'u.id', $currentUserId],
-                ])
-                ->one();
-        }
-
-        $messages = [];
-        if ($selectedUser !== null) {
-            $selectedUserId = (int) $selectedUser['id'];
-
-            Yii::$app->db->createCommand()->update('{{%mensagem}}', [
-                'lida' => 1,
-            ], [
-                'destinatario_id' => $currentUserId,
-                'remetente_id' => $selectedUserId,
-                'lida' => 0,
-            ])->execute();
-
-            $messages = (new Query())
-                ->select([
-                    'm.id',
-                    'm.remetente_id AS sender_id',
-                    'm.destinatario_id AS receiver_id',
-                    'm.conteudo',
-                    'm.anexo AS attachment_path',
-                    'm.data_envio AS created_at',
-                    'm.lida',
-                ])
-                ->from(['m' => 'mensagem'])
-                ->where([
-                    'or',
-                    ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $selectedUserId]],
-                    ['and', ['m.remetente_id' => $selectedUserId], ['m.destinatario_id' => $currentUserId]],
-                ])
-                ->orderBy(['m.data_envio' => SORT_ASC, 'm.id' => SORT_ASC])
-                ->limit(300)
-                ->all();
-
-            $messages = $this->attachMessageUrls($messages);
-
-            if (isset($conversationMetaByUserId[$selectedUserId])) {
-                $conversationMetaByUserId[$selectedUserId]['unread_count'] = 0;
-            }
-        }
-
-        $userSearchResults = [];
-        if ($userSearchTerm !== '') {
-            $userSearchResults = (new Query())
-                ->select([
-                    'u.id',
-                    'u.username',
-                    'pr.Frist_Name',
-                    'pr.Last_Name',
-                    'pr.Foto AS profile_photo',
-                ])
-                ->from(['u' => 'user'])
-                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
-                ->where([
-                    'and',
-                    ['<>', 'u.id', $currentUserId],
-                    [
-                        'or',
-                        ['like', 'u.username', $userSearchTerm],
-                        ['like', 'pr.Frist_Name', $userSearchTerm],
-                        ['like', 'pr.Last_Name', $userSearchTerm],
-                    ],
-                ])
-                ->orderBy(['u.username' => SORT_ASC])
-                ->limit(12)
-                ->all();
-        }
-
-        return $this->render('mensagens', [
-            'conversationUsers' => $conversationUsers,
-            'conversationMetaByUserId' => $conversationMetaByUserId,
-            'selectedUser' => $selectedUser,
-            'messages' => $messages,
-            'currentUserId' => $currentUserId,
-            'userSearchTerm' => $userSearchTerm,
-            'userSearchResults' => $userSearchResults,
-        ]);
-    }
-
-    public function actionMensagensUpdates($with = '')
-    {
-        Yii::$app->response->format = Response::FORMAT_JSON;
-
-        $currentUserId = (int) Yii::$app->user->id;
-        $withUsername = trim((string) $with);
-        if ($withUsername === '') {
-            return [
-                'success' => false,
-                'message' => 'Utilizador em falta.',
-            ];
-        }
-
-        $selectedUser = (new Query())
-            ->select([
-                'u.id',
-                'u.username',
-                'pr.Frist_Name',
-                'pr.Last_Name',
-                'pr.Foto AS profile_photo',
-            ])
-            ->from(['u' => 'user'])
-            ->leftJoin(['pr' => 'perfil',], 'pr.user_id = u.id')
-            ->where([
-                'and',
-                ['u.username' => $withUsername],
-                ['<>', 'u.id', $currentUserId],
-            ])
-            ->one();
-
-        if ($selectedUser === null) {
-            return [
-                'success' => false,
-                'message' => 'Utilizador nao encontrado.',
-            ];
-        }
-
-        $selectedUserId = (int) $selectedUser['id'];
-
-        Yii::$app->db->createCommand()->update('{{%mensagem}}', [
-            'lida' => 1,
-        ], [
-            'destinatario_id' => $currentUserId,
-            'remetente_id' => $selectedUserId,
-            'lida' => 0,
-        ])->execute();
-
-        $messages = (new Query())
-            ->select([
-                'm.id',
-                'm.remetente_id AS sender_id',
-                'm.destinatario_id AS receiver_id',
-                'm.conteudo',
-                'm.anexo AS attachment_path',
-                'm.data_envio AS created_at',
-                'm.lida',
-            ])
-            ->from(['m' => 'mensagem'])
-            ->where([
-                'or',
-                ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $selectedUserId]],
-                ['and', ['m.remetente_id' => $selectedUserId], ['m.destinatario_id' => $currentUserId]],
-            ])
-            ->orderBy(['m.data_envio' => SORT_ASC, 'm.id' => SORT_ASC])
-            ->limit(300)
-            ->all();
-
-        $conversationRows = Yii::$app->db->createCommand(
-            'SELECT
-                CASE WHEN m.remetente_id = :uid THEN m.destinatario_id ELSE m.remetente_id END AS other_user_id,
-                MAX(m.data_envio) AS last_message_at,
-                SUM(CASE WHEN m.destinatario_id = :uid AND m.lida = 0 THEN 1 ELSE 0 END) AS unread_count
-             FROM mensagem m
-             WHERE m.remetente_id = :uid OR m.destinatario_id = :uid
-             GROUP BY other_user_id
-             ORDER BY last_message_at DESC',
-            [':uid' => $currentUserId]
-        )->queryAll();
-
-        $conversationMetaByUserId = [];
-        foreach ($conversationRows as $row) {
-            $otherId = (int) ($row['other_user_id'] ?? 0);
-            if ($otherId <= 0) {
-                continue;
-            }
-            $conversationMetaByUserId[$otherId] = [
-                'last_message_at' => (string) ($row['last_message_at'] ?? ''),
-                'unread_count' => (int) ($row['unread_count'] ?? 0),
-                'last_message_preview' => '',
-            ];
-        }
-
-        $conversationUserIds = array_values(array_unique(array_map(static function ($row) {
-            return (int) ($row['other_user_id'] ?? 0);
-        }, $conversationRows)));
-        $conversationUserIds = array_filter($conversationUserIds, static function ($id) {
-            return $id > 0;
-        });
-
-        if (!empty($conversationUserIds)) {
-            foreach ($conversationUserIds as $otherId) {
-                $latestMessage = (new Query())
-                    ->select(['m.conteudo'])
-                    ->from(['m' => 'mensagem'])
-                    ->where([
-                        'or',
-                        ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $otherId]],
-                        ['and', ['m.remetente_id' => $otherId], ['m.destinatario_id' => $currentUserId]],
-                    ])
-                    ->orderBy(['m.data_envio' => SORT_DESC, 'm.id' => SORT_DESC])
-                    ->limit(1)
-                    ->one();
-
-                if ($latestMessage !== false && isset($conversationMetaByUserId[$otherId])) {
-                        $conversationMetaByUserId[$otherId]['last_message_preview'] = $this->buildMessagePreview($latestMessage);
-                }
-            }
-        }
-
-        if ($selectedUserId > 0) {
-            $latestMessage = (new Query())
-                ->select(['m.conteudo', 'm.anexo'])
-                ->from(['m' => 'mensagem'])
-                ->where([
-                    'or',
-                    ['and', ['m.remetente_id' => $currentUserId], ['m.destinatario_id' => $selectedUserId]],
-                    ['and', ['m.remetente_id' => $selectedUserId], ['m.destinatario_id' => $currentUserId]],
-                ])
-                ->orderBy(['m.data_envio' => SORT_DESC, 'm.id' => SORT_DESC])
-                ->limit(1)
-                ->one();
-
-            if ($latestMessage !== false) {
-                $conversationMetaByUserId[$selectedUserId]['last_message_preview'] = $this->buildMessagePreview($latestMessage);
-            }
-        }
-
-        if (isset($conversationMetaByUserId[$selectedUserId])) {
-            $conversationMetaByUserId[$selectedUserId]['unread_count'] = 0;
-        }
-
-        return [
-            'success' => true,
-            'messages' => $this->attachMessageUrls($messages),
-            'conversationMetaByUserId' => $conversationMetaByUserId,
-        ];
-    }
-
-    private function attachMessageUrls(array $messages)
-    {
-        foreach ($messages as $index => $message) {
-            $messages[$index]['attachment_url'] = $this->buildMessageAttachmentUrl((string) ($message['attachment_path'] ?? ''));
-        }
-
-        return $messages;
-    }
-
-    private function buildMessageAttachmentUrl($attachmentPath)
-    {
-        $attachmentPath = trim((string) $attachmentPath);
-        if ($attachmentPath === '' || strcasecmp($attachmentPath, 'img/default.jpeg') === 0) {
-            return '';
-        }
-
-        return Url::to('@web/' . ltrim($attachmentPath, '/'));
-    }
-
-    private function buildMessagePreview(array $message)
-    {
-        $text = trim((string) ($message['conteudo'] ?? ''));
-        if ($text !== '') {
-            return $text;
-        }
-
-        return trim((string) ($message['anexo'] ?? '')) !== '' ? 'Foto' : '';
-    }
-
-    public function actionGotinha()
-    {
-        $currentUserId = (int) Yii::$app->user->id;
-        $dailyGoalMl = 2000;
-
-        if (Yii::$app->request->isPost) {
-            $amountMl = (int) Yii::$app->request->post('quantidade_ml', 0);
-
-            if ($amountMl > 0) {
-                $agua = new Agua();
-                $agua->quantidade_ml = $amountMl;
-                $agua->user_id = $currentUserId;
-                $agua->data_registo = date('Y-m-d H:i:s');
-
-                if ($agua->save()) {
-                    Yii::$app->session->setFlash('Agua-success', 'Registo de agua guardado com sucesso.');
-                } else {
-                    Yii::$app->session->setFlash('Agua-error', 'Nao foi possivel guardar o registo de agua.');
-                }
-            } else {
-                Yii::$app->session->setFlash('Agua-error', 'Quantidade invalida.');
-            }
-
-            return $this->redirect(['gotinha']);
-        }
-
-        $todayStart = date('Y-m-d 00:00:00');
-        $todayEnd = date('Y-m-d 23:59:59');
-
-        $todayTotalMl = (int) (new Query())
-            ->from(['a' => 'agua'])
-            ->where([
-                'a.user_id' => $currentUserId,
-            ])
-            ->andWhere(['between', 'a.data_registo', $todayStart, $todayEnd])
-            ->sum('a.quantidade_ml');
-
-        $progressPercent = $dailyGoalMl > 0 ? min(100, (int) round(($todayTotalMl / $dailyGoalMl) * 100)) : 0;
-
-        $recentEntries = (new Query())
-            ->select(['a.id', 'a.quantidade_ml', 'a.data_registo'])
-            ->from(['a' => 'agua'])
-            ->where(['a.user_id' => $currentUserId])
-            ->orderBy(['a.data_registo' => SORT_DESC, 'a.id' => SORT_DESC])
-            ->limit(8)
-            ->all();
-
-        return $this->render('gotinha', [
-            'todayTotalMl' => $todayTotalMl,
-            'dailyGoalMl' => $dailyGoalMl,
-            'progressPercent' => $progressPercent,
-            'recentEntries' => $recentEntries,
-        ]);
-    }
-
-    public function actionProcurar()
-    {
-        $term = trim((string) Yii::$app->request->get('q', ''));
-        $users = [];
-        $posts = [];
-
-        if ($term !== '') {
-            $users = (new Query())
-                ->select([
-                    'u.id',
-                    'u.username',
-                    'pr.Frist_Name',
-                    'pr.Last_Name',
-                    'pr.Bio',
-                    'pr.Foto AS profile_photo',
-                ])
-                ->from(['u' => 'user'])
-                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = u.id')
-                ->where([
-                    'or',
-                    ['like', 'u.username', $term],
-                    ['like', 'pr.Frist_Name', $term],
-                    ['like', 'pr.Last_Name', $term],
-                    ['like', 'pr.Bio', $term],
-                ])
-                ->orderBy(['u.username' => SORT_ASC])
-                ->limit(20)
-                ->all();
-
-            $posts = (new Query())
-                ->select([
-                    'p.id',
-                    'p.titulo',
-                    'p.conteudo',
-                    'p.imagem',
-                    'p.data_criacao',
-                    'u.username',
-                    'pr.Foto AS profile_photo',
-                ])
-                ->from(['p' => 'post'])
-                ->innerJoin(['u' => 'user'], 'u.id = p.user_id')
-                ->leftJoin(['pr' => 'perfil'], 'pr.user_id = p.user_id')
-                ->where([
-                    'or',
-                    ['like', 'p.titulo', $term],
-                    ['like', 'p.conteudo', $term],
-                    ['like', 'u.username', $term],
-                ])
-                ->orderBy(['p.data_criacao' => SORT_DESC, 'p.id' => SORT_DESC])
-                ->limit(30)
-                ->all();
-        }
-
-        return $this->render('procurar', [
-            'term' => $term,
-            'users' => $users,
-            'posts' => $posts,
-        ]);
-    }
-
-    public function actionBadge()
-    {
-        $userId = (int) Yii::$app->user->id;
-        $isAdmin = $this->isCurrentUserAdmin();
-        $profile = Yii::$app->user->identity->profile;
-        $fullName = trim(($profile->Frist_Name ?? '') . ' ' . ($profile->Last_Name ?? ''));
-
-        if (!$isAdmin && Yii::$app->request->isPost) {
-            $uploadedPdf = UploadedFile::getInstanceByName('diplomaPdf');
-
-            if ($uploadedPdf === null) {
-                Yii::$app->session->setFlash('Badge-error', 'Seleciona um ficheiro PDF.');
-                return $this->refresh();
-            }
-
-            $extension = strtolower((string) $uploadedPdf->extension);
-            if ($extension !== 'pdf') {
-                Yii::$app->session->setFlash('Badge-error', 'O ficheiro tem de ser PDF.');
-                return $this->refresh();
-            }
-
-            $uploadDir = Yii::getAlias('@webroot/uploads/certificados');
-            FileHelper::createDirectory($uploadDir);
-
-            $safeBaseName = preg_replace('/[^a-zA-Z0-9_-]/', '', pathinfo($uploadedPdf->name, PATHINFO_FILENAME));
-            $safeBaseName = $safeBaseName ?: 'certificado';
-            $fileName = $userId . '_' . time() . '_' . $safeBaseName . '.pdf';
-            $fullPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-
-            if (!$uploadedPdf->saveAs($fullPath)) {
-                Yii::$app->session->setFlash('Badge-error', 'Nao foi possivel guardar o PDF.');
-                return $this->refresh();
-            }
-
-            $pedido = new BadgePedido();
-            $pedido->user_id = $userId;
-            $pedido->diploma_pdf = 'uploads/certificados/' . $fileName;
-            $pedido->estado = BadgePedido::ESTADO_PENDENTE;
-
-            if ($pedido->save()) {
-                Yii::$app->session->setFlash('Badge-success', 'Pedido de badge enviado para analise do administrador.');
-            } else {
-                Yii::$app->session->setFlash('Badge-error', 'Nao foi possivel guardar o pedido.');
-            }
-
-            return $this->refresh();
-        }
-
-        $lastPedido = (new \yii\db\Query())
-            ->from(BadgePedido::tableName())
-            ->where(['user_id' => $userId])
-            ->orderBy(['id' => SORT_DESC])
-            ->one();
-
-        $lastPedidoEstado = trim((string) ($lastPedido['estado'] ?? ''));
-        $lastPedidoPdf = trim((string) ($lastPedido['diploma_pdf'] ?? ''));
-        $hasLastPedido = $lastPedidoEstado !== '' || $lastPedidoPdf !== '';
-
-        $pendingRequests = [];
-        if ($isAdmin) {
-            $pendingRequests = (new \yii\db\Query())
-                ->select([
-                    'b.id',
-                    'b.user_id',
-                    'b.diploma_pdf',
-                    'b.estado',
-                    'b.created_at',
-                    'u.username',
-                ])
-                ->from(['b' => BadgePedido::tableName()])
-                ->innerJoin(['u' => 'user'], 'u.id = b.user_id')
-                ->where(['b.estado' => BadgePedido::ESTADO_PENDENTE])
-                ->orderBy(['b.id' => SORT_DESC])
-                ->all();
-        }
-
-        return $this->render('badge', [
-            'isAdmin' => $isAdmin,
-            'pendingRequests' => $pendingRequests,
-            'fullName' => $fullName,
-            'hasLastPedido' => $hasLastPedido,
-            'lastPedidoEstado' => $lastPedidoEstado,
-            'lastPedidoPdf' => $lastPedidoPdf,
-        ]);
-    }
-
-    public function actionBadgeReview($id, $acao)
-    {
-        if (!$this->isCurrentUserAdmin()) {
-            throw new NotFoundHttpException('Pagina nao encontrada.');
-        }
-
-        $pedido = (new \yii\db\Query())
-            ->from(BadgePedido::tableName())
-            ->where(['id' => (int) $id])
-            ->one();
-        if ($pedido === null) {
-            throw new NotFoundHttpException('Pedido nao encontrado.');
-        }
-
-        if ($pedido['estado'] !== BadgePedido::ESTADO_PENDENTE) {
-            Yii::$app->session->setFlash('Badge-error', 'Este pedido ja foi processado.');
-            return $this->redirect(['/user/badge']);
-        }
-
-        if ($acao === 'aprovar') {
-            $novoEstado = BadgePedido::ESTADO_APROVADO;
-        } elseif ($acao === 'rejeitar') {
-            $novoEstado = BadgePedido::ESTADO_REJEITADO;
-        } else {
-            Yii::$app->session->setFlash('Badge-error', 'Acao invalida.');
-            return $this->redirect(['/user/badge']);
-        }
-
-        $pedidoModel = BadgePedido::findOne((int) $id);
-        if ($pedidoModel === null) {
-            throw new NotFoundHttpException('Pedido nao encontrado.');
-        }
-
-        $pedidoModel->estado = $novoEstado;
-        $pedidoModel->admin_user_id = (int) Yii::$app->user->id;
-        $pedidoModel->save(false);
-
-        Yii::$app->session->setFlash('Badge-success', 'Pedido atualizado com sucesso.');
-        return $this->redirect(['/user/badge']);
-    }
-
-    private function isCurrentUserAdmin()
-    {
-        if (Yii::$app->user->isGuest) {
-            return false;
-        }
-
-        $canAdmin = (new \yii\db\Query())
-            ->select(['r.can_admin'])
-            ->from(['u' => 'user'])
-            ->innerJoin(['r' => 'role'], 'r.id = u.role_id')
-            ->where(['u.id' => (int) Yii::$app->user->id])
-            ->scalar();
-
-        return (int) $canAdmin === 1;
-    }
-
-    public function actionCriarpost()
-    {
-        $post = new Post();
-
-        if ($post->load(Yii::$app->request->post())) {
-            $post->user_id = (int) Yii::$app->user->id;
-            $post->data_criacao = date('Y-m-d H:i:s');
-
-            if (empty($post->titulo) && !empty($post->conteudo)) {
-                $post->titulo = mb_substr(trim($post->conteudo), 0, 80);
-            }
-
-            $uploadedImage = UploadedFile::getInstance($post, 'imagem');
-            if ($uploadedImage !== null) {
-                $uploadDir = Yii::getAlias('@webroot/uploads/posts');
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0775, true);
-                }
-
-                $fileName = uniqid('post_', true) . '.' . $uploadedImage->extension;
-                $filePath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
-
-                if ($uploadedImage->saveAs($filePath)) {
-                    $post->imagem = 'uploads/posts/' . $fileName;
-                } else {
-                    $post->addError('imagem', 'Nao foi possivel guardar a imagem.');
-                }
-            }
-
-            if (!$post->hasErrors() && $post->save()) {
-                Yii::$app->session->setFlash('Post-success', 'Post publicado com sucesso.');
-                return $this->refresh();
-            }
-
-            Yii::$app->session->setFlash('Post-error', implode(' | ', $post->getFirstErrors()));
-        }
-
-        return $this->render('criarpost', [
-            'post' => $post,
-        ]);
+        return $this->redirect(["/user/default/forgot", "token" => $token]);
     }
 }

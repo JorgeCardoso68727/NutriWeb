@@ -5,31 +5,69 @@ use yii\helpers\Html;
 use app\assets\PerfilAsset;
 
 PerfilAsset::register($this);
+$this->params['fullWidth'] = true;
+
+$isOwnProfile = (bool) $isOwnProfile;
+$isFollowing = (bool) $isFollowing;
+$isNutritionistProfile = (bool) $isNutritionistProfile;
+$isAdminViewer = (bool) ($isAdminViewer ?? false);
+$isViewedUserAdmin = (bool) ($isViewedUserAdmin ?? false);
+$isReviewMode = (bool) ($isReviewMode ?? false);
+$canModerateThisAccount = $isAdminViewer && !$isOwnProfile && ($isReviewMode || $isViewedUserAdmin || $isNutritionistProfile);
+$plans = $plans ?? [];
+$avatar = Url::to($avatarPath);
 
 
-$identity = Yii::$app->user->identity;
-$userForView = $viewUser ?? $identity;
-$isOwnProfile = $isOwnProfile ?? true;
-$posts = $posts ?? [];
-$publicationCount = $publicationCount ?? 0;
-$followersCount = $followersCount ?? 0;
-$followingCount = $followingCount ?? 0;
-$isFollowing = $isFollowing ?? false;
-$followersList = $followersList ?? [];
-$followingList = $followingList ?? [];
-$username = $userForView ? $userForView->username : 'utilizador';
-$fullName = trim(($profile->Frist_Name ?? '') . ' ' . ($profile->Last_Name ?? ''));
-$bio = $profile->Bio ?? '';
-if (empty($profile->Foto) || strcasecmp((string) $profile->Foto, 'img/default.jpeg') === 0) {
-    $avatar = Url::to('@web/Img/default.jpeg');
-} else {
-    $avatar = Url::to('@web/' . ltrim((string) $profile->Foto, '/'));
-}
-$this->title = 'Nutriweb - '. $username;
+$renderPostsGrid = static function (array $posts, string $columnClass, string $ratioClass): void {
+    if (empty($posts)) {
+        echo '<div class="col-12 text-center text-muted py-4">Sem publicações ainda.</div>';
+        return;
+    }
+
+    foreach ($posts as $post) {
+        $postId = (int) ($post->id ?? 0);
+        $postUrl = Url::to(['/homepage/post-aberto', 'id' => $postId]);
+        $imagePath = trim((string) ($post->imagem ?? ''));
+        $imageUrl = $imagePath !== ''
+            ? Url::to('@web/' . ltrim($imagePath, '/'))
+            : null;
+        $cardTitle = trim((string) ($post->titulo ?? ''));
+        $cardTitle = $cardTitle !== '' ? $cardTitle : 'Post';
+
+        echo '<div class="' . Html::encode($columnClass) . '">';
+        echo '<a href="' . Html::encode($postUrl) . '" class="d-block text-decoration-none">';
+        echo '<div class="' . Html::encode($ratioClass) . '">';
+
+        if ($imageUrl !== null) {
+            echo '<img src="' . Html::encode($imageUrl) . '" alt="' . Html::encode($cardTitle) . '" class="img-fluid object-fit-cover w-100 h-100">';
+        } else {
+            echo '<div class="d-flex align-items-center justify-content-center text-muted w-100 h-100">';
+            echo '<i class="bi bi-image fs-3"></i>';
+            echo '</div>';
+        }
+
+        echo '</div>';
+        echo '</a>';
+        echo '</div>';
+    }
+};
 ?>
 
 <main class="main-content">
     <div class="container py-5 submain">
+
+        <?php if (Yii::$app->session->hasFlash('Plan-success')): ?>
+            <div class="alert alert-success mb-4"><?= Html::encode(Yii::$app->session->getFlash('Plan-success')) ?></div>
+        <?php endif; ?>
+        <?php if (Yii::$app->session->hasFlash('Plan-error')): ?>
+            <div class="alert alert-danger mb-4"><?= Html::encode(Yii::$app->session->getFlash('Plan-error')) ?></div>
+        <?php endif; ?>
+        <?php if (Yii::$app->session->hasFlash('Profile-success')): ?>
+            <div class="alert alert-success mb-4"><?= Html::encode(Yii::$app->session->getFlash('Profile-success')) ?></div>
+        <?php endif; ?>
+        <?php if (Yii::$app->session->hasFlash('Profile-error')): ?>
+            <div class="alert alert-danger mb-4"><?= Html::encode(Yii::$app->session->getFlash('Profile-error')) ?></div>
+        <?php endif; ?>
 
         <div class="row align-items-center mb-5">
             <div class="col-md-4 text-center">
@@ -40,13 +78,22 @@ $this->title = 'Nutriweb - '. $username;
 
             <div class="col-md-8">
                 <div class="d-flex align-items-center mb-3">
-                    <h4 class="mb-0 me-3"><?= $username ?></h4>
-                    <?php if (!$isOwnProfile): ?>
-                        <i class="bi bi-exclamation-triangle reportar" data-bs-toggle="modal" data-bs-target="#staticBackdrop" title="Reportar"></i>
+                    <h4 class="mb-0 me-3"><?= Html::encode($displayName) ?></h4>
+                    <?php if ($isViewedUserAdmin): ?>
+                        <span class="badge rounded-pill text-bg-dark me-2" title="Conta Admin">
+                            <i class="bi bi-shield-lock-fill me-1"></i>Admin
+                        </span>
+                    <?php endif; ?>
+                    <?php if ($isNutritionistProfile): ?>
+                        <i class="bi bi-patch-check-fill text-success fs-5" title="Perfil Verificado"></i>
+                    <?php endif; ?>
+                    <?php if (!$isOwnProfile && !$canModerateThisAccount): ?>
+                        <i class="bi bi-exclamation-triangle reportar ms-5" data-bs-toggle="modal" data-bs-target="#staticBackdrop" title="Reportar"></i>
+                    <?php endif; ?>
+                    <?php if ($canModerateThisAccount): ?>
+                        <i class="bi bi-hammer ms-3" data-bs-toggle="modal" data-bs-target="#moderateAccountModal" title="Moderar conta" style="font-size: 1.2rem; color: #c94f4f; cursor: pointer;"></i>
                     <?php endif; ?>
                 </div>
-                <p class="fw-bold mb-3"><?= $fullName !== '' ? $fullName : 'Sem nome definido' ?></p>
-
                 <div class="d-flex mb-4">
                     <div class="me-4 text-center">
                         <span class="fw-bold d-block"><?= (int) $publicationCount ?></span> publicações
@@ -60,7 +107,7 @@ $this->title = 'Nutriweb - '. $username;
                 </div>
 
                 <div class="mb-3">
-                    <p class="mb-0"><?= $bio !== '' ? $bio : 'Sem biografia.' ?></p>
+                    <p class="mb-0"><?= Html::encode($bio !== '' ? $bio : 'Sem biografia.') ?></p>
                 </div>
             </div>
         </div>
@@ -68,48 +115,76 @@ $this->title = 'Nutriweb - '. $username;
         <div class="row mb-5">
             <div class="col-12 d-flex gap-3 px-4">
                 <?php if ($isOwnProfile): ?>
-                    <?= Html::a('Editar Perfil', ['/user/editar-perfil'], ['class' => 'btn flex-grow-1 py-2 rounded-3 botao-perfil']) ?>
+                    <?= Html::a('Editar Perfil', ['/editar-perfil'], ['class' => 'btn flex-grow-1 py-2 rounded-3 botao-perfil']) ?>
                 <?php else: ?>
-                    <?= Html::beginForm(['/user/toggle-follow', 'username' => $username], 'post', ['class' => 'flex-grow-1']) ?>
+                    <?= Html::beginForm(['/profile/toggle-follow', 'username' => $username], 'post', ['class' => 'flex-grow-1']) ?>
                     <button type="submit" class="btn w-100 py-2 rounded-3 botao-perfil">
                         <?= $isFollowing ? 'Deixar de seguir' : 'Seguir' ?>
                     </button>
                     <?= Html::endForm() ?>
-                    <?= Html::a(
-                        'Mensagem',
-                        ['/user/mensagens', 'with' => $username],
-                        ['class' => 'btn flex-grow-1 py-2 rounded-3 botao-perfil']
-                    ) ?>
+                    <button class="btn flex-grow-1 py-2 rounded-3 botao-perfil">Mensagem</button>
                 <?php endif; ?>
             </div>
         </div>
 
-        <hr class="mb-4">
-        <div class="row g-3">
-            <?php foreach ($posts as $post): ?>
-                <?php
-                $imagePath = trim((string) ($post->imagem ?? ''));
-                $imageUrl = $imagePath !== ''
-                    ? Url::to('@web/' . ltrim($imagePath, '/'))
-                    : null;
-                $cardTitle = trim((string) ($post->titulo ?? ''));
-                $cardTitle = $cardTitle !== '' ? $cardTitle : 'Sem título';
-                $cardContent = trim((string) ($post->conteudo ?? ''));
-                ?>
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="ratio ratio-1x1 bg-light border rounded-3 overflow-hidden position-relative">
-                        <img src="<?= Html::encode($imageUrl) ?>" alt="<?= Html::encode($cardTitle) ?>" class="img-fluid object-fit-cover w-100 h-100">
-                        <div class="position-absolute bottom-0 start-0 end-0 p-3" style="background: linear-gradient(180deg, transparent, rgba(0,0,0,.7));">
-                            <h6 class="text-white mb-1"><?= Html::encode($cardTitle) ?></h6>
-                            <?php if ($cardContent !== ''): ?>
-                                <small class="text-white-50"><?= Html::encode(mb_substr($cardContent, 0, 90)) ?><?= mb_strlen($cardContent) > 90 ? '...' : '' ?></small>
-                            <?php endif; ?>
-                        </div>
+        <?php if ($isNutritionistProfile): ?>
+            <ul class="nav nav-tabs justify-content-center border-0 mb-4" id="tabela" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active border-0 bg-transparent text-dark fw-bold" data-bs-toggle="tab" data-bs-target="#posts" type="button" role="tab" aria-controls="posts" aria-selected="true"><i class="bi bi-grid-3x3 me-2"></i>Posts</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link border-0 bg-transparent text-muted fw-bold" data-bs-toggle="tab" data-bs-target="#plans" type="button" role="tab" aria-controls="plans" aria-selected="false"><i class="bi bi-egg-fried me-2"></i>Planos</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="conteudotabela">
+                <div class="tab-pane fade show active" id="posts" role="tabpanel">
+                    <div class="row g-1">
+                        <?php $renderPostsGrid($posts, 'col-4', 'ratio ratio-1x1 bg-light border overflow-hidden rounded-2'); ?>
                     </div>
                 </div>
-            <?php endforeach; ?>
-        </div>
+                <div class="tab-pane fade" id="plans" role="tabpanel">
 
+                    <?php if (empty($plans)): ?>
+                        <div class="text-center text-muted py-4">Ainda nao existem planos para mostrar.</div>
+                    <?php else: ?>
+                        <div class="row g-1">
+                            <?php foreach ($plans as $plan): ?>
+                                <?php
+                                $planId = (int) ($plan->id ?? 0);
+                                $planUrl = Url::to(['/plan/ver-plano', 'id' => $planId]);
+                                $planStructure = json_decode((string) ($plan->estrutura_json ?? ''), true);
+                                $planImagePath = trim((string) ($planStructure['imagemPlano'] ?? ''));
+                                $planImageUrl = $planImagePath !== ''
+                                    ? Url::to('@web/' . ltrim($planImagePath, '/'))
+                                    : null;
+                                $planTitle = trim((string) ($plan->titulo ?? ''));
+                                $planTitle = $planTitle !== '' ? $planTitle : 'Plano nutricional';
+                                ?>
+                                <div class="col-4">
+                                    <a href="<?= Html::encode($planUrl) ?>" class="d-block text-decoration-none">
+                                        <div class="ratio ratio-1x1 bg-light border overflow-hidden rounded-2">
+                                            <?php if ($planImageUrl !== null): ?>
+                                                <img src="<?= Html::encode($planImageUrl) ?>" alt="<?= Html::encode($planTitle) ?>" class="img-fluid object-fit-cover w-100 h-100">
+                                            <?php else: ?>
+                                                <div class="d-flex align-items-center justify-content-center text-muted small px-2 text-center">
+                                                    <?= Html::encode($planTitle) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php else: ?>
+            <hr class="mb-4">
+            <div class="row g-3">
+                <?php $renderPostsGrid($posts, 'col-12 col-md-6 col-lg-4', 'ratio ratio-1x1 bg-light border rounded-3 overflow-hidden'); ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <?php if ($isOwnProfile): ?>
@@ -123,7 +198,7 @@ $this->title = 'Nutriweb - '. $username;
                 <i class="bi bi-moon-fill simbolo"></i>
             </div>
             <nav class="nav flex-column gap-3">
-                <a href="<?= Url::to(['/user/badge']) ?>" class="text-decoration-none text-dark fw-bold">Sou nutricionista</a>
+                <a href="<?= Url::to(['/badge']) ?>" class="text-decoration-none text-dark fw-bold">Sou nutricionista</a>
                 <a href="#" class="text-decoration-none text-dark fw-bold">Sou Instituto</a>
                 <a href="#" class="text-decoration-none text-dark fw-bold">Sobre nos</a>
                 <?= Html::beginForm(['/user/logout'], 'post', ['class' => 'mt-2']) ?>
@@ -139,35 +214,71 @@ $this->title = 'Nutriweb - '. $username;
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Reportar Utilizador</h1>
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel"><?= $isNutritionistProfile ? 'Reportar Profissional' : 'Reportar Utilizador' ?></h1>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form>
-                        <div class="mb-3">
-                            <label for="motivo" class="form-label">Motivo do Reporte</label>
-                            <select class="form-select" id="motivo" required>
-                                <option value="">Seleciona um motivo...</option>
+                    <?= Html::beginForm(['/reportar'], 'post', ['id' => 'profile-report-form']) ?>
+                    <?= Html::hiddenInput('target_type', 'profile') ?>
+                    <?= Html::hiddenInput('target_user_id', (int) ($viewUser->id ?? 0)) ?>
+                    <?= Html::hiddenInput('target_post_id', '') ?>
+                    <div class="mb-3">
+                        <label for="motivo" class="form-label">Motivo do Reporte</label>
+                        <select class="form-select" id="motivo" name="motivo" required>
+                            <option value="">Seleciona um motivo...</option>
+                            <?php if ($isNutritionistProfile): ?>
+                                <option value="ma-conduta">Má conduta profissional</option>
+                                <option value="informacao-falsa">Informação médica falsa</option>
+                                <option value="spam">Spam</option>
+                            <?php else: ?>
                                 <option value="conteudo-inapropriado">Conteúdo Inapropriado</option>
                                 <option value="assedio">Assédio</option>
                                 <option value="spam">Spam</option>
                                 <option value="fraude">Fraude</option>
                                 <option value="outro">Outro</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="descricao" class="form-label">Descrição</label>
-                            <textarea class="form-control" id="descricao" rows="3" placeholder="Descreve o motivo do teu reporte..."></textarea>
-                        </div>
-                    </form>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3" placeholder="Descreve o motivo do teu reporte..."></textarea>
+                    </div>
+                    <?= Html::endForm() ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-success me-auto" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger">Reportar</button>
+                    <button type="submit" class="btn btn-danger" form="profile-report-form">Reportar</button>
                 </div>
             </div>
         </div>
     </div>
+
+    <?php if ($canModerateThisAccount): ?>
+        <div class="modal fade" id="moderateAccountModal" tabindex="-1" aria-labelledby="moderateAccountModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="moderateAccountModalLabel">Moderar conta</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">Seleciona a acao para esta conta.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary me-auto" data-bs-dismiss="modal">Cancelar</button>
+
+                        <?= Html::beginForm(['/moderar-conta', 'id' => (int) ($viewUser->id ?? 0), 'acao' => 'nao-banir'], 'post', ['class' => 'd-inline']) ?>
+                        <button type="submit" class="btn btn-outline-secondary">Nao banir</button>
+                        <?= Html::endForm() ?>
+
+                        <?= Html::beginForm(['/moderar-conta', 'id' => (int) ($viewUser->id ?? 0), 'acao' => 'banir'], 'post', ['class' => 'd-inline']) ?>
+                        <button type="submit" class="btn btn-danger" data-confirm="Tens a certeza que queres banir esta conta?">Banir conta</button>
+                        <?= Html::endForm() ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <div class="modal fade" id="followersModal" tabindex="-1" aria-labelledby="followersModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable">

@@ -33,16 +33,14 @@ $this->title = 'Nutriweb - Início';
                     : Url::to('@web/Img/Pato-Com-Arroz-bolohesa.png');
 
                 $avatarPath = trim((string) ($post['profile_photo'] ?? ''));
-                if ($avatarPath === '' || strcasecmp($avatarPath, 'img/default.jpeg') === 0) {
-                    $avatarUrl = Url::to('@web/Img/default.jpeg');
-                } else {
-                    $avatarUrl = Url::to('@web/' . ltrim($avatarPath, '/'));
-                }
+                $avatarUrl = $avatarPath !== ''
+                    ? Url::to('@web/' . ltrim($avatarPath, '/'))
+                    : Url::to('@web/Img/Nutriweb Logo.png');
 
                 $username = trim((string) ($post['username'] ?? ''));
                 $displayName = $username !== '' ? $username : 'Utilizador';
                 $profileUrl = $username !== '' ? Url::to('/' . $username) : '#';
-                $postUrl = Url::to(['post-aberto', 'id' => $postId]);
+                $postUrl = Url::to(['/homepage/post-aberto', 'id' => $postId]);
                 $hasLiked = !empty($likedPostIds[$postId]);
                 $likeCount = (int) ($likeCountByPost[$postId] ?? 0);
                 $likeActiveColor = $textColor === '#F9FAFB' ? '#FFFFFF' : '#E11D48';
@@ -113,11 +111,9 @@ $this->title = 'Nutriweb - Início';
                 <?php foreach ($nutritionists as $nutritionist): ?>
                     <?php
                     $photoPath = trim((string) ($nutritionist['profile_photo'] ?? ''));
-                    if ($photoPath === '' || strcasecmp($photoPath, 'img/default.jpeg') === 0) {
-                        $photoUrl = Url::to('@web/Img/default.jpeg');
-                    } else {
-                        $photoUrl = Url::to('@web/' . ltrim($photoPath, '/'));
-                    }
+                    $photoUrl = $photoPath !== ''
+                        ? Url::to('@web/' . ltrim($photoPath, '/'))
+                        : Url::to('@web/Img/Nutriweb Logo.png');
 
                     $firstName = trim((string) ($nutritionist['Frist_Name'] ?? ''));
                     $lastName = trim((string) ($nutritionist['Last_Name'] ?? ''));
@@ -129,6 +125,7 @@ $this->title = 'Nutriweb - Início';
                     $bioText = $bio !== '' ? $bio : 'Nutricionista disponivel para ajudar no seu plano alimentar.';
                     $phone = trim((string) ($nutritionist['Telefone'] ?? ''));
                     $profileUrl = $username !== '' ? Url::to('/' . $username) : '#';
+                    $canContact = $phone !== '';
                     ?>
                     <div class="nutri-card">
                         <?= Html::a(
@@ -142,7 +139,15 @@ $this->title = 'Nutriweb - Início';
                             <?php if ($phone !== ''): ?>
                                 <p><strong>Telefone:</strong> <?= Html::encode($phone) ?></p>
                             <?php endif; ?>
-                            <button class="btn-contactar">Contactar</button>
+                            <button
+                                class="btn-contactar js-contact-qr"
+                                type="button"
+                                data-name="<?= Html::encode($displayName) ?>"
+                                data-phone="<?= Html::encode($phone) ?>"
+                                <?= $canContact ? '' : 'disabled title="Sem telefone disponivel"' ?>
+                            >
+                                Contactar
+                            </button>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -160,6 +165,22 @@ $this->title = 'Nutriweb - Início';
             </div>
         </div>
     </div>
+
+        <div class="modal fade" id="contactQrModal" tabindex="-1" aria-labelledby="contactQrModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="contactQrModalLabel">Adicionar contacto</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p class="mb-2">Aponta a câmara do telemovel para o QR code.</p>
+                        <p class="small text-muted mb-3" id="contactQrMeta"></p>
+                        <img id="contactQrImage" alt="QR code do contacto" style="width: 260px; height: 260px; max-width: 100%; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08);">
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <?php
     $this->registerJs(<<<'JS'
@@ -219,6 +240,45 @@ document.addEventListener('submit', async function (event) {
     } finally {
         button.disabled = false;
     }
+});
+
+document.addEventListener('click', function (event) {
+    const trigger = event.target.closest('.js-contact-qr');
+    if (!trigger) {
+        return;
+    }
+
+    const name = (trigger.dataset.name || '').trim();
+    const rawPhone = (trigger.dataset.phone || '').trim();
+    if (!rawPhone) {
+        return;
+    }
+
+    const phone = rawPhone.replace(/\s+/g, '');
+    const safeName = name !== '' ? name : 'Nutricionista';
+
+    const vcard = [
+        'BEGIN:VCARD',
+        'VERSION:3.0',
+        'FN:' + safeName,
+        'TEL;TYPE=CELL:' + phone,
+        'END:VCARD'
+    ].join('\n');
+
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(vcard);
+
+    const qrImage = document.getElementById('contactQrImage');
+    const qrMeta = document.getElementById('contactQrMeta');
+    const modalElement = document.getElementById('contactQrModal');
+    if (!qrImage || !qrMeta || !modalElement || typeof bootstrap === 'undefined') {
+        return;
+    }
+
+    qrImage.src = qrUrl;
+    qrMeta.textContent = safeName + ' • ' + phone;
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+    modal.show();
 });
 JS);
     ?>

@@ -15,6 +15,7 @@ use Yii;
  * @property int $Bio
  * @property int $Foto
  * @property int $Telefone
+ * @property int $meta_diaria_agua
  * @property User $user
  */
 class Perfil extends \yii\db\ActiveRecord
@@ -37,7 +38,9 @@ class Perfil extends \yii\db\ActiveRecord
         return [
             [['Frist_Name', 'Last_Name'], 'required'],
             [['Bio'], 'default', 'value' => ''],
+            [['meta_diaria_agua'], 'default', 'value' => 2000],
             [['user_id', 'Telefone'], 'integer'],
+            [['meta_diaria_agua'], 'integer', 'min' => 1],
             [['Bio', 'Foto'], 'string', 'max' => 255],
             [['Frist_Name', 'Last_Name'], 'string', 'max' => 25],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => ModuleUser::class, 'targetAttribute' => ['user_id' => 'id']],
@@ -57,6 +60,7 @@ class Perfil extends \yii\db\ActiveRecord
             'Bio' => 'Bio',
             'Foto' => 'Foto',
             'Telefone' => 'Telefone',
+            'meta_diaria_agua' => 'Meta diária de água',
         ];
     }
 
@@ -75,8 +79,11 @@ class Perfil extends \yii\db\ActiveRecord
         if ($this->Bio === null) {
             $this->Bio = '';
         }
+        if ($this->meta_diaria_agua === null || (int) $this->meta_diaria_agua <= 0) {
+            $this->meta_diaria_agua = 2000;
+        }
         if ($this->isNewRecord && !$this->Foto) {
-            $this->Foto = 'Img/default.jpeg';
+            $this->Foto = 'img/default.jpeg';
         }
         return parent::beforeSave($insert);
     }

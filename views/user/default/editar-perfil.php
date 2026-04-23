@@ -8,11 +8,9 @@ use yii\widgets\ActiveForm;
 PerfilAsset::register($this);
 $this->title = 'Nutriweb - Editar perfil';
 
-if (empty($profile->Foto) || strcasecmp((string) $profile->Foto, 'img/default.jpeg') === 0) {
-    $avatar = Url::to('@web/Img/default.jpeg');
-} else {
-    $avatar = Url::to('@web/' . ltrim((string) $profile->Foto, '/'));
-}
+$avatar = !empty($profile->Foto)
+    ? Url::to('@web/' . ltrim($profile->Foto, '/'))
+    : Url::to('@web/Img/Nutriweb Logo.png');
 
 $this->title = 'NutriWeb - Editar Perfil';
 ?>

@@ -1,4 +1,4 @@
-        body{
+body{
             background-color: #F6F6EA;
             color: #333;
             font-family: sans-serif;
@@ -91,4 +91,17 @@
 
         .sidebar-right.active {
             right: 0;
+        }
+
+        .reportar {
+            cursor: pointer;
+            color: #8a8a8a;
+        }
+
+        .reportar:hover {
+            color: #c94f4f;
+        }
+
+        #tabela .nav-link.active {
+            color: #238230 !important;
         }

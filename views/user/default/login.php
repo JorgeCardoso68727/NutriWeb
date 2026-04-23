@@ -35,7 +35,7 @@ $this->beginPage();
                 'errorOptions' => ['class' => 'invalid-feedback d-block', 'style' => 'text-align:left'],
             ],
         ]); ?>
-
+            <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->getCsrfToken()) ?>
         <div class="mb-3">
             <?= $form->field($model, 'email')->textInput([
                 'class' => 'form-control',
@@ -62,7 +62,7 @@ $this->beginPage();
         </div>
 
         <div class="resetPassword-link">
-            <a href="<?= Url::to(['site/request-password-reset']) ?>">Repor Password</a>
+            <a href="<?= Url::to(['/user/default/forgot']) ?>">Repor Password</a>
         </div>
 
         <div class="d-grid">

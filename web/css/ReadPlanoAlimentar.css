@@ -1,0 +1,232 @@
+body {
+    background-color: #F6F6EA;
+    color: #333;
+    font-family: sans-serif;
+    margin: 0;
+}
+
+.plano-open-shell {
+    margin-left: 280px;
+}
+
+.plano-open-page {
+    background: #F6F6EA;
+    border-radius: 18px;
+    padding: 1.25rem;
+}
+
+.plano-open-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.plano-open-title {
+    margin: 0;
+    font-weight: 800;
+    color: #1f3f1e;
+}
+
+.plano-open-back {
+    border-radius: 999px;
+    border: 0;
+    background: #238230;
+    color: #fff;
+    font-weight: 700;
+    padding: 0.55rem 1rem;
+    text-decoration: none;
+}
+
+.plano-open-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.plano-open-delete-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 0;
+    background: #c33b3b;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.plano-open-delete-btn:hover,
+.plano-open-delete-btn:focus {
+    background: #a32f2f;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.plano-open-back:hover,
+.plano-open-back:focus {
+    background: #1e6b1e;
+    color: #fff;
+}
+
+.plano-open-summary {
+    margin: 1rem 0 1.25rem;
+}
+
+.plano-open-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.plano-open-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.4rem 0.75rem;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #2f2f2f;
+}
+
+.plano-open-days {
+    margin-bottom: 1rem;
+}
+
+.selected-day-display {
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.DiasSemana {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.dia,
+.diaSele {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    background-color: #e0e0e0;
+    color: #333;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.dia:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.diaSele {
+    background-color: #238230;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dia-inativo {
+    opacity: 0.45;
+}
+
+.plano-open-day-empty {
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.9rem;
+}
+
+.plano-open-meal-card {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+}
+
+.plano-open-image-wrap {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border: 2px solid #333;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+    background: #fff;
+}
+
+.plano-open-meal-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.plano-open-description {
+    margin: 0;
+    white-space: pre-wrap;
+    min-height: 90px;
+}
+
+.post-card-preview {
+    width: 100%;
+    max-width: 500px;
+    background-color: #D9D9D9;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+@media (max-width: 991.98px) {
+    .plano-open-shell {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .plano-open-page {
+        border-radius: 14px;
+        padding: 0.9rem;
+    }
+
+    .plano-open-title {
+        font-size: 1.2rem;
+    }
+
+    .plano-open-back {
+        width: 100%;
+        text-align: center;
+    }
+
+    .plano-open-actions {
+        width: 100%;
+    }
+}

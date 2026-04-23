@@ -63,6 +63,7 @@ body {
     margin-bottom: 20px;
     overflow: hidden;
     position: relative;
+    touch-action: none;
 }
 
 .image-upload-area i {
@@ -71,10 +72,95 @@ body {
 }
 
 .image-upload-area img {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
     object-fit: cover;
+    object-position: center center;
+    transform: none;
+    transform-origin: center center;
+    user-select: none;
+    -webkit-user-drag: none;
+    cursor: grab;
     display: none;
+}
+
+.image-upload-area img:active {
+    cursor: grabbing;
+}
+
+.crop-hint {
+    width: 100%;
+    margin: -8px 0 16px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.66);
+}
+
+.image-adjustment-panel {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(6px);
+}
+
+.adjustment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-weight: 700;
+    font-size: 0.92rem;
+}
+
+.adjustment-reset {
+    border: none;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #333;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.adjustment-control {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.adjustment-control:last-child {
+    margin-bottom: 0;
+}
+
+.adjustment-control label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.72);
+}
+
+.adjustment-control input[type="range"] {
+    width: 100%;
+    accent-color: #195321;
+    cursor: pointer;
+}
+
+.image-upload-area img.is-adjustable {
+    cursor: grab;
+}
+
+.image-upload-area img.is-adjustable:active {
+    cursor: grabbing;
 }
 
 .post-textarea {

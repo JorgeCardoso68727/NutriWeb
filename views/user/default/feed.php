@@ -12,10 +12,10 @@ $this->beginPage();
 ?>
 
 <?= Html::csrfMetaTags() ?>
-    <?php $this->head() ?>
+<?php $this->head() ?>
 <div class="body-principal">
-<div class="main-content">
-    <?php $this->beginBody() ?>
+    <div class="main-content">
+        <?php $this->beginBody() ?>
 
         <?php if (!empty($posts)): ?>
             <?php foreach ($posts as $post): ?>
@@ -38,16 +38,14 @@ $this->beginPage();
                     : Url::to('@web/Img/Pato-Com-Arroz-bolohesa.png');
 
                 $avatarPath = trim((string) ($post['profile_photo'] ?? ''));
-                if ($avatarPath === '' || strcasecmp($avatarPath, 'img/default.jpeg') === 0) {
-                    $avatarUrl = Url::to('@web/Img/default.jpeg');
-                } else {
-                    $avatarUrl = Url::to('@web/' . ltrim($avatarPath, '/'));
-                }
+                $avatarUrl = $avatarPath !== ''
+                    ? Url::to('@web/' . ltrim($avatarPath, '/'))
+                    : Url::to('@web/Img/Nutriweb Logo.png');
 
                 $username = trim((string) ($post['username'] ?? ''));
                 $displayName = $username !== '' ? $username : 'Utilizador';
                 $profileUrl = $username !== '' ? Url::to('/' . $username) : '#';
-                $postUrl = Url::to(['post-aberto', 'id' => $postId]);
+                $postUrl = Url::to(['/homepage/post-aberto', 'id' => $postId]);
                 $hasLiked = !empty($likedPostIds[$postId]);
                 $likeCount = (int) ($likeCountByPost[$postId] ?? 0);
                 $likeActiveColor = $textColor === '#F9FAFB' ? '#FFFFFF' : '#E11D48';
@@ -88,18 +86,17 @@ $this->beginPage();
                             'post',
                             ['style' => 'margin:0;', 'class' => 'like-toggle-form']
                         ) ?>
-                            <button
-                                type="submit"
-                                class="btn p-0 d-inline-flex align-items-center gap-1 like-toggle-button"
-                                style="border:none; background:transparent; color: <?= Html::encode($likeColor) ?>;"
-                                aria-label="<?= $hasLiked ? 'Retirar like' : 'Dar like' ?>"
-                                data-liked="<?= $hasLiked ? '1' : '0' ?>"
-                                data-inactive-color="<?= Html::encode($textColor) ?>"
-                                data-active-color="<?= Html::encode($likeActiveColor) ?>"
-                            >
-                                <span class="like-count" style="font-size: 0.8rem;"><?= Html::encode((string) $likeCount) ?></span>
-                                <i class="bi like-icon <?= $hasLiked ? 'bi-heart-fill' : 'bi-heart' ?> fs-4"></i>
-                            </button>
+                        <button
+                            type="submit"
+                            class="btn p-0 d-inline-flex align-items-center gap-1 like-toggle-button"
+                            style="border:none; background:transparent; color: <?= Html::encode($likeColor) ?>;"
+                            aria-label="<?= $hasLiked ? 'Retirar like' : 'Dar like' ?>"
+                            data-liked="<?= $hasLiked ? '1' : '0' ?>"
+                            data-inactive-color="<?= Html::encode($textColor) ?>"
+                            data-active-color="<?= Html::encode($likeActiveColor) ?>">
+                            <span class="like-count" style="font-size: 0.8rem;"><?= Html::encode((string) $likeCount) ?></span>
+                            <i class="bi like-icon <?= $hasLiked ? 'bi-heart-fill' : 'bi-heart' ?> fs-4"></i>
+                        </button>
                         <?= Html::endForm() ?>
                     </div>
                 </div>
@@ -112,10 +109,10 @@ $this->beginPage();
             </div>
         <?php endif; ?>
 
-</div>
+    </div>
 
-<?php
-$this->registerJs(<<<'JS'
+    <?php
+    $this->registerJs(<<<'JS'
 document.addEventListener('submit', async function (event) {
     const form = event.target;
     if (!(form instanceof HTMLFormElement) || !form.classList.contains('like-toggle-form')) {
@@ -174,8 +171,8 @@ document.addEventListener('submit', async function (event) {
     }
 });
 JS);
-?>
+    ?>
 
-<?php $this->endBody() ?>
+    <?php $this->endBody() ?>
 
-<?php $this->endPage() ?>
+    <?php $this->endPage() ?>

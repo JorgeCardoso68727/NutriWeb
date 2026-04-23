@@ -192,7 +192,7 @@ if ($selectedUser !== null) {
                     <?php endif; ?>
                 </div>
 
-                <?= Html::beginForm(['mensagens', 'with' => $selectedUsername], 'post', ['class' => 'chat-input-container', 'id' => 'chatSendForm', 'enctype' => 'multipart/form-data']) ?>
+                <?= Html::beginForm(['mensagens/enviar-mensagem'], 'post', ['class' => 'chat-input-container', 'id' => 'chatSendForm', 'enctype' => 'multipart/form-data']) ?>
                 <?= Html::hiddenInput('target_user_id', (string) ((int) $selectedUser['id'])) ?>
                 <div id="chatAttachmentPreviewWrap" class="mb-2 d-none">
                     <img id="chatAttachmentPreview" alt="Pré-visualização da foto" style="display:block; max-width:180px; width:100%; height:auto; border-radius:12px; border:1px solid rgba(0,0,0,.08);">
@@ -233,6 +233,7 @@ $this->registerJs(<<<'JS'
 
     var currentUserId = Number(chat.dataset.currentUserId || 0);
     var updatesUrl = chat.dataset.updatesUrl || '';
+    var forceScrollToBottom = false;
 
     function escapeHtml(value) {
         return String(value)
@@ -257,6 +258,10 @@ $this->registerJs(<<<'JS'
         var minutes = String(date.getMinutes()).padStart(2, '0');
 
         return hours + ':' + minutes;
+    }
+
+    function isNearBottom(element, threshold) {
+        return (element.scrollHeight - element.scrollTop - element.clientHeight) <= threshold;
     }
 
     function clearAttachmentPreview() {
@@ -340,6 +345,9 @@ $this->registerJs(<<<'JS'
             return;
         }
 
+        var wasNearBottom = isNearBottom(chat, 80);
+        var previousScrollTop = chat.scrollTop;
+
         try {
             var response = await fetch(updatesUrl, {
                 headers: {
@@ -360,7 +368,13 @@ $this->registerJs(<<<'JS'
 
             renderMessages(payload.messages || []);
             updateUnreadBadges(payload.conversationMetaByUserId || {});
-            chat.scrollTop = chat.scrollHeight;
+
+            if (forceScrollToBottom || wasNearBottom) {
+                chat.scrollTop = chat.scrollHeight;
+                forceScrollToBottom = false;
+            } else {
+                chat.scrollTop = previousScrollTop;
+            }
         } catch (error) {
             // Ignore transient polling errors and retry on next interval.
         }
@@ -421,6 +435,7 @@ $this->registerJs(<<<'JS'
             }
             clearAttachmentPreview();
 
+            forceScrollToBottom = true;
             await refreshConversation();
         } catch (error) {
             sendForm.submit();

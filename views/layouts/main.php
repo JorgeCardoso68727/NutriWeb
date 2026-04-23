@@ -9,9 +9,40 @@ use yii\bootstrap5\Breadcrumbs;
 use yii\bootstrap5\Html;
 use yii\bootstrap5\Nav;
 use yii\bootstrap5\NavBar;
+use yii\db\Query;
 use yii\helpers\Url;
 
 AppAsset::register($this);
+$isFullWidth = !empty($this->params['fullWidth']);
+
+$showCreatePlanLink = false;
+$isAdmin = false;
+if (!Yii::$app->user->isGuest) {
+    $currentUserId = (int) Yii::$app->user->id;
+
+    $roleSchema = Yii::$app->db->schema->getTableSchema('role', true);
+    if ($roleSchema !== null) {
+        $selectColumns = [];
+        if (isset($roleSchema->columns['can_nutricionista'])) {
+            $selectColumns[] = 'r.can_nutricionista';
+        }
+        if (isset($roleSchema->columns['can_admin'])) {
+            $selectColumns[] = 'r.can_admin';
+        }
+
+        if (!empty($selectColumns)) {
+            $permissionValues = (new Query())
+                ->select($selectColumns)
+                ->from(['u' => 'user'])
+                ->innerJoin(['r' => 'role'], 'r.id = u.role_id')
+                ->where(['u.id' => $currentUserId])
+                ->one();
+
+            $showCreatePlanLink = (int) ($permissionValues['can_nutricionista'] ?? 0) === 1;
+            $isAdmin = (int) ($permissionValues['can_admin'] ?? 0) === 1;
+        }
+    }
+}
 
 $this->registerCsrfMetaTags();
 $this->registerMetaTag(['charset' => Yii::$app->charset], 'charset');
@@ -36,20 +67,26 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/x-icon', 'href' => Yii
         <img src="<?= Url::to('@web/Img/Nutriweb Logo.png') ?>" class="sidebar-logo">
 
         <nav class="nav flex-column">
-            <a class="nav-link" href="<?= yii\helpers\Url::to(['/user/inicio']) ?>"><i class="bi bi-house-door"></i> Início</a>
-            <a class="nav-link" href="<?= yii\helpers\Url::to(['/user/feed']) ?>"><i class="bi bi-egg-fried"></i> Feed</a>
-            <a class="nav-link" href="<?= yii\helpers\Url::to(['/user/mensagens']) ?>"><i class="bi bi-chat-dots"></i> Mensagem</a>
-            <a class="nav-link" href="<?= yii\helpers\Url::to(['/user/gotinha']) ?>"><i class="bi bi-droplet"></i> Lembrete de Água</a>
-            <a class="nav-link" href="<?= yii\helpers\Url::to(['/user/procurar']) ?>"><i class="bi bi-search"></i> Procurar</a>
+            <a class="nav-link" href="<?= Url::to(['/inicio']) ?>"><i class="bi bi-house-door"></i> Início</a>
+            <a class="nav-link" href="<?= Url::to(['/feed']) ?>"><i class="bi bi-egg-fried"></i> Feed</a>
+            <a class="nav-link" href="<?= Url::to(['/mensagens']) ?>"><i class="bi bi-chat-dots"></i> Mensagem</a>
+            <a class="nav-link" href="<?= Url::to(['/gotinha']) ?>"><i class="bi bi-droplet"></i> Gotinha</a>
+            <a class="nav-link" href="<?= Url::to(['/procurar']) ?>"><i class="bi bi-search"></i> Procurar</a>
 
             <div class="fixed-bottom ms-3" style="width: 200px;">
-                <a class="nav-link" href="<?= yii\helpers\Url::to(['/user/criarpost']) ?>"><i class="bi bi-plus-lg"></i> Criar Post</a>
+                <?php if ($showCreatePlanLink): ?>
+                    <a class="nav-link" href="<?= Url::to(['/criar-plano']) ?>"><i class="bi bi-clipboard-plus"></i> Criar Plano</a>
+                <?php endif; ?>
+                <?php if ($isAdmin): ?>
+                    <a class="nav-link" href="<?= Url::to(['/reports/dashboard']) ?>"><i class="bi bi-patch-check"></i> Dashboard</a>
+                <?php endif; ?>
+                <a class="nav-link" href="<?= Url::to(['/criarpost']) ?>"><i class="bi bi-plus-lg"></i> Criar Post</a>
                 <?php if (!Yii::$app->user->isGuest): ?>
                     <a class="nav-link" href="<?= '/' . Yii::$app->user->identity->username ?>">
                         <i class="bi bi-person-circle"></i> Perfil
                     </a>
                 <?php else: ?>
-                    <a class="nav-link" href="<?= yii\helpers\Url::to(['/user/login']) ?>">
+                    <a class="nav-link" href="<?= Url::to(['/user/login']) ?>">
                         <i class="bi bi-person-circle"></i> Perfil
                     </a>
                 <?php endif; ?>
@@ -58,7 +95,7 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/x-icon', 'href' => Yii
     </div>
 
     <main id="main" class="flex-shrink-0" role="main">
-        <div class="<?= !empty($this->params['fullWidth']) ? 'container-fluid px-0' : 'container' ?>">
+        <div class="<?= $isFullWidth ? 'container-fluid p-0' : 'container' ?>">
             <?php if (!empty($this->params['breadcrumbs'])): ?>
                 <?= Breadcrumbs::widget(['links' => $this->params['breadcrumbs']]) ?>
             <?php endif ?>
