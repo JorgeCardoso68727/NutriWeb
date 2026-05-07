@@ -351,7 +351,7 @@ class HomepageController extends Controller
             $likedPostIds = array_fill_keys(array_map('intval', $userLikedPostIds), true);
         }
 
-        return $this->render('@app/views/user/default/feed', [
+        return $this->render('@app/views/user/default/Feed', [
             'posts' => $posts,
             'likedPostIds' => $likedPostIds,
             'likeCountByPost' => $likeCountByPost,
@@ -360,7 +360,7 @@ class HomepageController extends Controller
 
     public function actionMensagens()
     {
-        return $this->render('@app/views/user/default/mensagens');
+        return $this->render('@app/views/user/default/Mensagens');
     }
 
     public function actionGotinha()

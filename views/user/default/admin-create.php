@@ -10,14 +10,14 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 DashboardAsset::register($this);
-$this->title = 'Criar conta admin';
+$this->title = 'Criar conta de administrador';
 ?>
 
 <div class="dashboard-container">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
         <h1 class="mb-0"><?= Html::encode($this->title) ?></h1>
         <a class="btn btn-outline-secondary" href="<?= Url::to(['/reports/dashboard']) ?>">
-            Voltar ao dashboard
+            Voltar ao painel
         </a>
     </div>
 
@@ -53,27 +53,27 @@ JS); ?>
 
             <div class="row g-3">
                 <div class="col-md-6">
-                    <?= $form->field($profile, 'Frist_Name')->textInput(['placeholder' => 'Primeiro nome']) ?>
+                    <?= $form->field($profile, 'Frist_Name')->textInput(['placeholder' => 'Primeiro nome'])->label('Primeiro nome') ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($profile, 'Last_Name')->textInput(['placeholder' => 'Ultimo nome']) ?>
+                    <?= $form->field($profile, 'Last_Name')->textInput(['placeholder' => 'Último nome'])->label('Último nome') ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($profile, 'Telefone')->input('number', ['placeholder' => 'Telefone']) ?>
+                    <?= $form->field($profile, 'Telefone')->input('number', ['placeholder' => 'Telefone'])->label('Telefone') ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($user, 'username')->textInput(['placeholder' => 'Username da conta admin']) ?>
+                    <?= $form->field($user, 'username')->textInput(['placeholder' => 'Nome de utilizador da conta admin'])->label('Nome de utilizador') ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($user, 'email')->input('email', ['placeholder' => 'Email da conta admin']) ?>
+                    <?= $form->field($user, 'email')->input('email', ['placeholder' => 'Correio eletrónico da conta admin'])->label('Correio eletrónico') ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($user, 'newPassword')->passwordInput(['placeholder' => 'Palavra-passe temporária']) ?>
+                    <?= $form->field($user, 'newPassword')->passwordInput(['placeholder' => 'Palavra-passe temporária'])->label('Palavra-passe') ?>
                 </div>
             </div>
 
             <div class="d-flex gap-2 mt-4">
-                <?= Html::submitButton('Criar conta admin', ['class' => 'btn btn-primary']) ?>
+                <?= Html::submitButton('Criar conta de administrador', ['class' => 'btn btn-primary']) ?>
                 <a href="<?= Url::to(['/reports/dashboard']) ?>" class="btn btn-outline-secondary">Cancelar</a>
             </div>
 
