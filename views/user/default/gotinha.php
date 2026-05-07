@@ -15,7 +15,7 @@ $recentEntries = is_array($recentEntries ?? null) ? $recentEntries : [];
 
 <div class="gotinha-page">
     <div class="gotinha-header">
-        <h4 class="mb-1">Lembrete de tomar agua</h4>
+        <h4 class="mb-1">Gestão da tua hidratação</h4>
         <p class="text-muted mb-0">Regista os teus copos ao longo do dia para manteres a hidratacao.</p>
     </div>
 

@@ -4,6 +4,13 @@ use yii\helpers\Html;
 use yii\bootstrap5\ActiveForm; // Usamos bootstrap5 para manter a compatibilidade
 use app\assets\RegisterAsset;
 
+/**
+ * @var \yii\web\View $this
+ * @var \amnah\yii2\user\models\User $user
+ * @var \app\models\Perfil $profile
+ * @var bool $showVerificationModal
+ */
+
 RegisterAsset::register($this);
 $this->title = 'Nutriweb - Registrar';
 $this->context->layout = false; // Remove o menu padrão do Yii
@@ -39,6 +46,17 @@ $this->beginPage();
                         ],
                     ]); ?>
                     <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->getCsrfToken()) ?>
+                    <?= Html::hiddenInput('register_step', 'send_code', ['id' => 'register-step']) ?>
+
+                    <?php if ($flashError = Yii::$app->session->getFlash('Register-error')): ?>
+                        <div class="alert alert-danger"><?= $flashError ?></div>
+                    <?php endif; ?>
+
+                    <?php $modalError = Yii::$app->session->getFlash('Register-modal-error'); ?>
+                    <?php if ($modalError): ?>
+                        <?php $showVerificationModal = true; ?>
+                    <?php endif; ?>
+
                     <div class="row g-2">
                         <div class="col-6">
                             <?= $form->field($profile, 'Frist_Name')->textInput(['placeholder' => 'Primeiro nome']) ?>
@@ -84,6 +102,34 @@ $this->beginPage();
                         Já tem conta? <?= Html::a('Faça Login!', ['/user/login']) ?>
                     </div>
 
+                    <div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="verificationModalLabel">Confirmar e-mail</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <?php if (!empty($modalError)): ?>
+                                        <div class="alert alert-danger py-2"><?= $modalError ?></div>
+                                    <?php endif; ?>
+
+                                    <p class="mb-2">Introduz o codigo de 6 digitos que enviamos para o teu email.</p>
+                                    <?= Html::input('text', 'email_verification_code', '', [
+                                        'class' => 'form-control',
+                                        'maxlength' => 6,
+                                        'placeholder' => 'Ex: 123456',
+                                        'id' => 'email-verification-code',
+                                    ]) ?>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="button" class="btn btn-primary" id="confirm-verification-btn">Confirmar codigo</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <?php ActiveForm::end(); ?>
                 <?php endif; ?>
             </div>
@@ -91,11 +137,13 @@ $this->beginPage();
     </div>
 
     <?php
-    // JS para os dois olhos das passwords
+    $showVerificationModalJs = !empty($showVerificationModal) ? 'true' : 'false';
     $js = <<<JS
     function setupToggle(inputId, iconId) {
         const input = document.getElementById(inputId);
         const icon = document.getElementById(iconId);
+        if (!input || !icon) return;
+
         icon.addEventListener('click', function() {
             const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
             input.setAttribute('type', type);
@@ -103,8 +151,37 @@ $this->beginPage();
             this.classList.toggle('bi-eye-slash');
         });
     }
+
     setupToggle('pass1', 'icon1');
     setupToggle('pass2', 'icon2');
+
+    const registerForm = document.getElementById('register-form');
+    const registerStep = document.getElementById('register-step');
+    const confirmButton = document.getElementById('confirm-verification-btn');
+    const modalElement = document.getElementById('verificationModal');
+    const verificationInput = document.getElementById('email-verification-code');
+
+    if (confirmButton && registerForm && registerStep) {
+        confirmButton.addEventListener('click', function () {
+            registerStep.value = 'verify_code';
+            registerForm.submit();
+        });
+    }
+
+    if (verificationInput && registerForm && registerStep) {
+        verificationInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                registerStep.value = 'verify_code';
+                registerForm.submit();
+            }
+        });
+    }
+
+    if (modalElement && typeof bootstrap !== 'undefined' && {$showVerificationModalJs}) {
+        const modalInstance = new bootstrap.Modal(modalElement);
+        modalInstance.show();
+    }
 JS;
     $this->registerJs($js);
     ?>

@@ -13,6 +13,7 @@ $isNutritionistProfile = (bool) $isNutritionistProfile;
 $isAdminViewer = (bool) ($isAdminViewer ?? false);
 $isViewedUserAdmin = (bool) ($isViewedUserAdmin ?? false);
 $isReviewMode = (bool) ($isReviewMode ?? false);
+$isInstitutionProfile = (bool) ($isInstitutionProfile ?? false);
 $canModerateThisAccount = $isAdminViewer && !$isOwnProfile && ($isReviewMode || $isViewedUserAdmin || $isNutritionistProfile);
 $plans = $plans ?? [];
 $avatar = Url::to($avatarPath);
@@ -57,16 +58,16 @@ $renderPostsGrid = static function (array $posts, string $columnClass, string $r
     <div class="container py-5 submain">
 
         <?php if (Yii::$app->session->hasFlash('Plan-success')): ?>
-            <div class="alert alert-success mb-4"><?= Html::encode(Yii::$app->session->getFlash('Plan-success')) ?></div>
+            <div class="alert alert-success mb-4 js-auto-dismiss-alert" data-auto-dismiss="1"><?= Html::encode(Yii::$app->session->getFlash('Plan-success')) ?></div>
         <?php endif; ?>
         <?php if (Yii::$app->session->hasFlash('Plan-error')): ?>
-            <div class="alert alert-danger mb-4"><?= Html::encode(Yii::$app->session->getFlash('Plan-error')) ?></div>
+            <div class="alert alert-danger mb-4 js-auto-dismiss-alert" data-auto-dismiss="1"><?= Html::encode(Yii::$app->session->getFlash('Plan-error')) ?></div>
         <?php endif; ?>
         <?php if (Yii::$app->session->hasFlash('Profile-success')): ?>
-            <div class="alert alert-success mb-4"><?= Html::encode(Yii::$app->session->getFlash('Profile-success')) ?></div>
+            <div class="alert alert-success mb-4 js-auto-dismiss-alert" data-auto-dismiss="1"><?= Html::encode(Yii::$app->session->getFlash('Profile-success')) ?></div>
         <?php endif; ?>
         <?php if (Yii::$app->session->hasFlash('Profile-error')): ?>
-            <div class="alert alert-danger mb-4"><?= Html::encode(Yii::$app->session->getFlash('Profile-error')) ?></div>
+            <div class="alert alert-danger mb-4 js-auto-dismiss-alert" data-auto-dismiss="1"><?= Html::encode(Yii::$app->session->getFlash('Profile-error')) ?></div>
         <?php endif; ?>
 
         <div class="row align-items-center mb-5">
@@ -77,22 +78,30 @@ $renderPostsGrid = static function (array $posts, string $columnClass, string $r
             </div>
 
             <div class="col-md-8">
-                <div class="d-flex align-items-center mb-3">
-                    <h4 class="mb-0 me-3"><?= Html::encode($displayName) ?></h4>
-                    <?php if ($isViewedUserAdmin): ?>
-                        <span class="badge rounded-pill text-bg-dark me-2" title="Conta Admin">
-                            <i class="bi bi-shield-lock-fill me-1"></i>Admin
-                        </span>
-                    <?php endif; ?>
-                    <?php if ($isNutritionistProfile): ?>
-                        <i class="bi bi-patch-check-fill text-success fs-5" title="Perfil Verificado"></i>
-                    <?php endif; ?>
-                    <?php if (!$isOwnProfile && !$canModerateThisAccount): ?>
-                        <i class="bi bi-exclamation-triangle reportar ms-5" data-bs-toggle="modal" data-bs-target="#staticBackdrop" title="Reportar"></i>
-                    <?php endif; ?>
-                    <?php if ($canModerateThisAccount): ?>
-                        <i class="bi bi-hammer ms-3" data-bs-toggle="modal" data-bs-target="#moderateAccountModal" title="Moderar conta" style="font-size: 1.2rem; color: #c94f4f; cursor: pointer;"></i>
-                    <?php endif; ?>
+                <div class="mb-3">
+                    <p class="mb-1 text-muted"><?= Html::encode($username) ?></p>
+                    <div class="d-flex align-items-center">
+                        <h4 class="mb-0 me-3"><?= Html::encode($displayName) ?></h4>
+                        <?php if ($isViewedUserAdmin): ?>
+                            <span class="badge rounded-pill text-bg-dark ms-2 me-2" title="Conta Admin">
+                                <i class="bi bi-shield-lock-fill me-1"></i>Admin
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($isInstitutionProfile): ?>
+                            <span class="badge rounded-pill text-bg-success ms-2 me-2" title="Conta Instituição">
+                                <i class="bi bi-building-fill me-1"></i>Instituição
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($isNutritionistProfile): ?>
+                            <i class="bi bi-patch-check-fill text-success fs-5" title="Perfil Verificado"></i>
+                        <?php endif; ?>
+                        <?php if (!$isOwnProfile && !$canModerateThisAccount): ?>
+                            <i class="bi bi-exclamation-triangle reportar ms-5" data-bs-toggle="modal" data-bs-target="#staticBackdrop" title="Reportar"></i>
+                        <?php endif; ?>
+                        <?php if ($canModerateThisAccount): ?>
+                            <i class="bi bi-hammer ms-3" data-bs-toggle="modal" data-bs-target="#moderateAccountModal" title="Moderar conta" style="font-size: 1.2rem; color: #c94f4f; cursor: pointer;"></i>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="d-flex mb-4">
                     <div class="me-4 text-center">
@@ -122,7 +131,7 @@ $renderPostsGrid = static function (array $posts, string $columnClass, string $r
                         <?= $isFollowing ? 'Deixar de seguir' : 'Seguir' ?>
                     </button>
                     <?= Html::endForm() ?>
-                    <button class="btn flex-grow-1 py-2 rounded-3 botao-perfil">Mensagem</button>
+                    <?= Html::a('Mensagem', ['/mensagens/mensagens', 'with' => $username], ['class' => 'btn flex-grow-1 py-2 rounded-3 botao-perfil']) ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -144,7 +153,6 @@ $renderPostsGrid = static function (array $posts, string $columnClass, string $r
                     </div>
                 </div>
                 <div class="tab-pane fade" id="plans" role="tabpanel">
-
                     <?php if (empty($plans)): ?>
                         <div class="text-center text-muted py-4">Ainda nao existem planos para mostrar.</div>
                     <?php else: ?>
@@ -179,6 +187,64 @@ $renderPostsGrid = static function (array $posts, string $columnClass, string $r
                     <?php endif; ?>
                 </div>
             </div>
+        <?php elseif ($isInstitutionProfile): ?>
+            <ul class="nav nav-tabs justify-content-center border-0 mb-4" id="tabela" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active border-0 bg-transparent text-dark fw-bold" data-bs-toggle="tab" data-bs-target="#institution-posts" type="button" role="tab" aria-controls="institution-posts" aria-selected="true"><i class="bi bi-grid-3x3 me-2"></i>Posts</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link border-0 bg-transparent text-muted fw-bold" data-bs-toggle="tab" data-bs-target="#institution-events" type="button" role="tab" aria-controls="institution-events" aria-selected="false"><i class="bi bi-calendar-event me-2"></i>Eventos</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="conteudotabela">
+                <div class="tab-pane fade show active" id="institution-posts" role="tabpanel">
+                    <div class="row g-1">
+                        <?php $renderPostsGrid($posts, 'col-4', 'ratio ratio-1x1 bg-light border overflow-hidden rounded-2'); ?>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="institution-events" role="tabpanel">
+                    <?php if (empty($events)): ?>
+                        <div class="text-center text-muted py-4">Ainda não existem eventos para mostrar.</div>
+                    <?php else: ?>
+                        <div class="row g-4">
+                            <?php foreach ($events as $event): ?>
+                                <?php
+                                $eventId = (int) $event->id;
+                                $eventUrl = Url::to(['/event/view', 'id' => $eventId]);
+                                $categoryName = $event->category->name ?? 'Sem categoria';
+                                $eventTitle = trim((string) $event->title) !== '' ? trim((string) $event->title) : 'Evento';
+                                $isEventCompleted = (string) ($event->status ?? 'active') === 'completed';
+                                ?>
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card h-100 shadow-sm border-0 event-card" style="background-color: #f0f8f0;">
+                                        <div class="card-body d-flex flex-column event-card-body">
+                                            <div class="mb-2">
+                                                <span class="badge event-badge mb-2"><?= Html::encode($categoryName) ?></span>
+                                                <?php if ($isEventCompleted): ?>
+                                                    <span class="badge text-bg-success ms-1 mb-2">Concluído</span>
+                                                <?php endif; ?>
+                                                <h5 class="card-title mb-1 event-card-title"><?= Html::a(Html::encode($eventTitle), $eventUrl, ['class' => 'text-decoration-none stretched-link event-card-link']) ?></h5>
+                                            </div>
+                                            <p class="card-text flex-grow-1 event-card-text"><?= Html::encode(mb_strimwidth((string) $event->description, 0, 140, '...')) ?></p>
+                                            <div class="small text-muted mb-3 event-card-meta">
+                                                <div><i class="bi bi-geo-alt me-1"></i><?= Html::encode((string) ($event->location ?: 'Local a definir')) ?></div>
+                                                <div><i class="bi bi-calendar-event me-1"></i><?= Html::encode((string) $event->start_date) ?></div>
+                                            </div>
+                                            <div class="mt-auto d-flex gap-2">
+                                                <?= Html::a('Ver evento', $eventUrl, ['class' => 'btn btn-success btn-sm']) ?>
+                                                <?php if ($isOwnProfile): ?>
+                                                    <?= Html::a('Editar', ['/event/update', 'id' => $eventId], ['class' => 'btn btn-warning btn-sm']) ?>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         <?php else: ?>
             <hr class="mb-4">
             <div class="row g-3">
@@ -198,9 +264,12 @@ $renderPostsGrid = static function (array $posts, string $columnClass, string $r
                 <i class="bi bi-moon-fill simbolo"></i>
             </div>
             <nav class="nav flex-column gap-3">
-                <a href="<?= Url::to(['/badge']) ?>" class="text-decoration-none text-dark fw-bold">Sou nutricionista</a>
-                <a href="#" class="text-decoration-none text-dark fw-bold">Sou Instituto</a>
-                <a href="#" class="text-decoration-none text-dark fw-bold">Sobre nos</a>
+                <?php if (!$isNutritionistProfile): ?>
+                    <a href="<?= Url::to(['/badge']) ?>" class="text-decoration-none text-dark fw-bold">Sou nutricionista</a>
+                <?php endif; ?>
+                <?php if (!$isInstitutionProfile): ?>
+                    <a href="<?= Url::to(['/badge', 'tipo' => 'instituicao']) ?>" class="text-decoration-none text-dark fw-bold">Sou instituição</a>
+                <?php endif; ?>
                 <?= Html::beginForm(['/user/logout'], 'post', ['class' => 'mt-2']) ?>
                 <button type="submit" class="text-decoration-none text-dark fw-bold border-0 bg-transparent p-0 text-start">
                     Logout
@@ -209,6 +278,21 @@ $renderPostsGrid = static function (array $posts, string $columnClass, string $r
             </nav>
         </aside>
     <?php endif; ?>
+
+    <?php $this->registerJs(<<<JS
+(function () {
+    document.querySelectorAll('.js-auto-dismiss-alert[data-auto-dismiss="1"]').forEach(function (alertNode) {
+        window.setTimeout(function () {
+            if (window.bootstrap && window.bootstrap.Alert) {
+                window.bootstrap.Alert.getOrCreateInstance(alertNode).close();
+                return;
+            }
+
+            alertNode.remove();
+        }, 2000);
+    });
+})();
+JS); ?>
 
     <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
         <div class="modal-dialog">

@@ -63,6 +63,7 @@ $config = [
                 '/criar-plano' => 'plan/criar-plano',
                 '/criar-plano-semanal' => 'plan/criar-plano-semanal',
                 '/plano/<id:\d+>' => 'plan/ver-plano',
+                '/plano/<id:\d+>/editar' => 'plan/editar',
                 '/plano/<id:\d+>/eliminar' => 'plan/delete',
                 '/public-profile' => 'profile/public-profile',
                 '/public-profile/<username:[A-Za-z0-9_\-\.]+>' => 'profile/public-profile',
@@ -80,15 +81,18 @@ $config = [
                 '/procurar' => 'procurar/index',
 
                 '/badge' => 'badge/badge',
+                '/event/complete/<id:\d+>' => 'event/complete',
                 '/dashboard' => 'reports/dashboard',
                 '/reports-contas' => 'reports/reports-accounts',
                 '/reports-conteudo' => 'reports/reports-content',
+                '/reports-eventos' => 'reports/reports-events',
                 '/reports-conteudo/revisto/<id:\d+>' => 'reports/mark-post-report-reviewed',
+                '/reports-eventos/revisto/<id:\d+>' => 'reports/mark-event-report-reviewed',
                 '/moderar-conta/<id:\d+>/<acao:(banir|nao-banir)>' => 'reports/moderate-account',
                 '/badge-review/<id:\d+>/<acao:(aprovar|rejeitar)>' => 'badge/badge-review',
                 '/reportar' => 'reports/create',
 
-                '<username:(?!user$|site$|debug$|gii$|assets$|perfil$|editar-perfil$|toggle-follow$|criar-plano$|criar-plano-semanal$|plano$|public-profile$|inicio$|homepage$|toggle-like$|post-aberto$|remove-post$|feed$|mensagens$|gotinha$|criarpost$|procurar$|badge$|badge-review$|dashboard$|reports-contas$|reports-conteudo$|reportar$|moderar-conta$)[A-Za-z0-9_\-\.]+>' => 'profile/public-profile',
+                '<username:(?!user$|site$|debug$|gii$|assets$|perfil$|editar-perfil$|toggle-follow$|criar-plano$|criar-plano-semanal$|plano$|public-profile$|inicio$|homepage$|toggle-like$|post-aberto$|remove-post$|feed$|mensagens$|gotinha$|criarpost$|procurar$|badge$|badge-review$|dashboard$|reports-contas$|reports-conteudo$|reports-eventos$|reportar$|moderar-conta$)[A-Za-z0-9_\-\.]+>' => 'profile/public-profile',
             ],
         ],
         'view' => [
@@ -121,24 +125,20 @@ $config = [
 ];
 
 if (YII_ENV_DEV) {
-    // Register dev modules only when their packages are installed.
-    if (class_exists('yii\\debug\\Module')) {
-        $config['bootstrap'][] = 'debug';
-        $config['modules']['debug'] = [
-            'class' => 'yii\debug\Module',
-            // uncomment the following to add your IP if you are not connecting from localhost.
-            //'allowedIPs' => ['127.0.0.1', '::1'],
-        ];
-    }
+    // configuration adjustments for 'dev' environment
+    $config['bootstrap'][] = 'debug';
+    $config['modules']['debug'] = [
+        'class' => 'yii\debug\Module',
+        // uncomment the following to add your IP if you are not connecting from localhost.
+        //'allowedIPs' => ['127.0.0.1', '::1'],
+    ];
 
-    if (class_exists('yii\\gii\\Module')) {
-        $config['bootstrap'][] = 'gii';
-        $config['modules']['gii'] = [
-            'class' => 'yii\gii\Module',
-            // uncomment the following to add your IP if you are not connecting from localhost.
-            //'allowedIPs' => ['127.0.0.1', '::1'],
-        ];
-    }
+    $config['bootstrap'][] = 'gii';
+    $config['modules']['gii'] = [
+        'class' => 'yii\gii\Module',
+        // uncomment the following to add your IP if you are not connecting from localhost.
+        //'allowedIPs' => ['127.0.0.1', '::1'],
+    ];
 }
 
 return $config;

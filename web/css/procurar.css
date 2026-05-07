@@ -98,7 +98,7 @@ body {
 .search-grid {
     margin-top: 14px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
 }
 
@@ -128,6 +128,10 @@ body {
     padding: 10px;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
     margin-bottom: 10px;
+}
+
+.event-card {
+    grid-template-columns: 1fr;
 }
 
 .result-card:last-child {
@@ -182,7 +186,7 @@ body {
 
 @media (max-width: 960px) {
     .search-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
     }
 }
 

@@ -17,6 +17,7 @@ $isFullWidth = !empty($this->params['fullWidth']);
 
 $showCreatePlanLink = false;
 $isAdmin = false;
+$isInstitution = false;
 if (!Yii::$app->user->isGuest) {
     $currentUserId = (int) Yii::$app->user->id;
 
@@ -29,6 +30,9 @@ if (!Yii::$app->user->isGuest) {
         if (isset($roleSchema->columns['can_admin'])) {
             $selectColumns[] = 'r.can_admin';
         }
+        if (isset($roleSchema->columns['can_instituicao'])) {
+            $selectColumns[] = 'r.can_instituicao';
+        }
 
         if (!empty($selectColumns)) {
             $permissionValues = (new Query())
@@ -40,6 +44,7 @@ if (!Yii::$app->user->isGuest) {
 
             $showCreatePlanLink = (int) ($permissionValues['can_nutricionista'] ?? 0) === 1;
             $isAdmin = (int) ($permissionValues['can_admin'] ?? 0) === 1;
+            $isInstitution = (int) ($permissionValues['can_instituicao'] ?? 0) === 1;
         }
     }
 }
@@ -72,6 +77,7 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/x-icon', 'href' => Yii
             <a class="nav-link" href="<?= Url::to(['/mensagens']) ?>"><i class="bi bi-chat-dots"></i> Mensagem</a>
             <a class="nav-link" href="<?= Url::to(['/gotinha']) ?>"><i class="bi bi-droplet"></i> Gotinha</a>
             <a class="nav-link" href="<?= Url::to(['/procurar']) ?>"><i class="bi bi-search"></i> Procurar</a>
+            <a class="nav-link" href="<?= Url::to(['/event/index']) ?>"><i class="bi bi-calendar-event"></i> Eventos</a>
 
             <div class="fixed-bottom ms-3" style="width: 200px;">
                 <?php if ($showCreatePlanLink): ?>
@@ -79,6 +85,9 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/x-icon', 'href' => Yii
                 <?php endif; ?>
                 <?php if ($isAdmin): ?>
                     <a class="nav-link" href="<?= Url::to(['/reports/dashboard']) ?>"><i class="bi bi-patch-check"></i> Dashboard</a>
+                <?php endif; ?>
+                <?php if ($isInstitution): ?>
+                    <a class="nav-link" href="<?= Url::to(['/event/create']) ?>"><i class="bi bi-plus-circle"></i> Criar Evento</a>
                 <?php endif; ?>
                 <a class="nav-link" href="<?= Url::to(['/criarpost']) ?>"><i class="bi bi-plus-lg"></i> Criar Post</a>
                 <?php if (!Yii::$app->user->isGuest): ?>

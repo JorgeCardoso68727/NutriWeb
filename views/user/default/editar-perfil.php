@@ -41,7 +41,6 @@ $this->title = 'NutriWeb - Editar Perfil';
                 'class' => 'form-control custom-input shadow-sm',
                 'placeholder' => 'Primeiro nome',
             ])->label(false) ?>
-            <div class="form-text small">Podes apenas alterar o teu nome duas vezes num prazo de 14 dias.</div>
         </div>
 
         <div class="mb-4">

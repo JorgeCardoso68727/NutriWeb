@@ -26,8 +26,7 @@ class AppAsset extends AssetBundle
         'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css',
         'css/sidebar.css',
     ];
-    public $js = [
-    ];
+    public $js = [];
     public $depends = [
         'yii\web\YiiAsset',
         'yii\bootstrap5\BootstrapAsset'

@@ -77,6 +77,89 @@ body {
     margin: 1rem 0 1.25rem;
 }
 
+.plano-open-tags {
+    margin: 1.1rem 0 1.5rem;
+    padding: 1rem 1.1rem;
+    border-radius: 22px;
+    background: #F6F6EA;
+    border: 1px solid rgba(35, 130, 48, 0.12);
+    box-shadow: 0 12px 28px rgba(15, 54, 19, 0.06);
+}
+
+.plano-open-tags-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+}
+
+.plano-open-tags-kicker {
+    display: inline-flex;
+    padding: 0.35rem 0.7rem;
+    margin-bottom: 0.45rem;
+    border-radius: 999px;
+    background: rgba(35, 130, 48, 0.12);
+    color: #238230;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.plano-open-tags h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #1f3f1e;
+}
+
+.plano-open-tags-count {
+    flex: 0 0 auto;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid rgba(35, 130, 48, 0.16);
+    color: #456248;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.plano-open-tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.plano-open-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(35, 130, 48, 0.16);
+    color: #214b28;
+    font-weight: 700;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.05);
+}
+
+.plano-open-tag i {
+    color: #238230;
+    font-size: 1.05rem;
+}
+
+.plano-open-tags-empty {
+    margin: 1.1rem 0 1.5rem;
+    padding: 0.9rem 1rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px dashed rgba(35, 130, 48, 0.2);
+    color: #5e6b5f;
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
 .plano-open-meta {
     display: flex;
     flex-wrap: wrap;
@@ -215,6 +298,14 @@ body {
     .plano-open-page {
         border-radius: 14px;
         padding: 0.9rem;
+    }
+
+    .plano-open-tags {
+        padding: 0.9rem;
+    }
+
+    .plano-open-tags-header {
+        flex-direction: column;
     }
 
     .plano-open-title {

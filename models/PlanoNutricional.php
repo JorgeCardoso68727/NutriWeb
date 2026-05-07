@@ -56,4 +56,25 @@ class PlanoNutricional extends \yii\db\ActiveRecord
     {
         return $this->hasOne(ModuleUser::class, ['id' => 'user_id']);
     }
+
+    /**
+     * Gets query for [[Tags]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getTags()
+    {
+        return $this->hasMany(RecipeTag::className(), ['id' => 'tag_id'])
+            ->viaTable('plano_has_tag', ['plano_id' => 'id']);
+    }
+
+    /**
+     * Gets query for [[PlanoHasTags]].
+     *
+     * @return \yii\db\ActiveQuery
+     */
+    public function getPlanoHasTags()
+    {
+        return $this->hasMany(PlanoHasTag::className(), ['plano_id' => 'id']);
+    }
 }

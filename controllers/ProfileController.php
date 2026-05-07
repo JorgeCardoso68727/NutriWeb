@@ -3,6 +3,7 @@
 namespace app\controllers;
 
 use app\helpers\RolePermissionHelper;
+use app\models\Event;
 use app\models\PlanoNutricional;
 use app\models\Post;
 use app\models\Seguidor;
@@ -54,6 +55,8 @@ class ProfileController extends Controller
     //Redireciona para o perfil publico do utilizador.
     public function actionPublicProfile($username = null)
     {
+        Event::completeExpiredEvents();
+
         if ($username === null && !Yii::$app->user->isGuest) {
             $username = Yii::$app->user->identity->username;
         }
@@ -116,9 +119,14 @@ class ProfileController extends Controller
         $followingCount = Seguidor::countFollowing($viewUserId);
         $isFollowing = !Yii::$app->user->isGuest && Seguidor::isFollowing((int) Yii::$app->user->id, $viewUserId);
         $isNutritionistProfile = RolePermissionHelper::isUserNutritionist($viewUserId);
+        $isInstitutionProfile = RolePermissionHelper::isUserInstitution($viewUserId);
         $plans = PlanoNutricional::find()
             ->where(['user_id' => $viewUserId])
             ->orderBy(['created_at' => SORT_DESC, 'id' => SORT_DESC])
+            ->all();
+        $events = Event::find()
+            ->where(['creator_id' => $viewUserId])
+            ->orderBy(['start_date' => SORT_DESC, 'created_at' => SORT_DESC, 'id' => SORT_DESC])
             ->all();
         $userTable = $userClass::tableName();
 
@@ -160,9 +168,11 @@ class ProfileController extends Controller
             'followingCount' => $followingCount,
             'isFollowing' => $isFollowing,
             'isNutritionistProfile' => $isNutritionistProfile,
+            'isInstitutionProfile' => $isInstitutionProfile,
             'followersList' => $followersList,
             'followingList' => $followingList,
             'plans' => $plans,
+            'events' => $events,
             'username' => $username,
             'displayName' => $displayName,
             'bio' => $bio,

@@ -60,4 +60,10 @@ class RolePermissionHelper
     {
         return self::hasRolePermission($userId, 'nutricionista');
     }
+
+    // Verifica se o utilizador é instituição
+    public static function isUserInstitution(int $userId): bool
+    {
+        return self::hasRolePermission($userId, 'instituicao');
+    }
 }

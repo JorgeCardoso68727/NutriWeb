@@ -28,6 +28,7 @@ $chavesOrdenadas = $ordemDias;
 $perfilAutorUrl = Url::to('/' . $autorUsername);
 $diaAtivo = !empty($chavesOrdenadas) ? (string) $chavesOrdenadas[0] : (string) $ordemDias[0];
 $canDeletePlan = !Yii::$app->user->isGuest && (int) Yii::$app->user->id === (int) ($plan->user_id ?? 0);
+$canEditPlan = $canDeletePlan;
 
 $this->registerJs(<<<JS
 (function () {
@@ -75,6 +76,14 @@ JS);
             <div class="plano-open-hero">
                 <h1 class="h3 plano-open-title"><?= Html::encode($tituloPlano) ?></h1>
                 <div class="plano-open-actions">
+                    <?php if ($canEditPlan): ?>
+                        <?= Html::a('<i class="bi bi-pencil-square"></i>', ['/plan/editar', 'id' => (int) $plan->id], [
+                            'class' => 'plano-open-delete-btn',
+                            'title' => 'Editar plano',
+                            'aria-label' => 'Editar plano',
+                        ]) ?>
+                    <?php endif; ?>
+
                     <?php if ($canDeletePlan): ?>
                         <?= Html::beginForm(['/plan/delete', 'id' => (int) $plan->id], 'post', [
                             'class' => 'd-inline-block',
@@ -89,6 +98,36 @@ JS);
                     <?= Html::a('Voltar ao perfil', $perfilAutorUrl, ['class' => 'plano-open-back']) ?>
                 </div>
             </div>
+
+            <!-- Secção de Tags do Plano -->
+            <?php
+            $tags = \app\models\RecipeTag::find()
+                ->innerJoin('plano_has_tag pht', 'pht.tag_id = recipe_tag.id')
+                ->where(['pht.plano_id' => (int) $plan->id])
+                ->orderBy(['name' => SORT_ASC])
+                ->all();
+            ?>
+
+            <?php if (!empty($tags)): ?>
+                <section class="plano-open-tags">
+                    <div class="plano-open-tags-header">
+                        <div>
+                            <span class="plano-open-tags-kicker">Características</span>
+                        </div>
+                    </div>
+
+                    <div class="plano-open-tags-list">
+                        <?php foreach ($tags as $tag): ?>
+                            <span class="plano-open-tag">
+                                <i class="bi bi-check2-circle"></i>
+                                <span><?= Html::encode($tag->name) ?></span>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php else: ?>
+                <div class="plano-open-tags-empty">Nenhuma característica selecionada pelo autor.</div>
+            <?php endif; ?>
 
             <div class="DiasSemana plano-open-days">
                 <?php foreach ($ordemDias as $diaPadrao): ?>

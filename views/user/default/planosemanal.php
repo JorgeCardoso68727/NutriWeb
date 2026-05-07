@@ -10,6 +10,8 @@ $this->title = 'NutriWeb - Criar Plano Semanal';
 $selectedDay = (string) ($selectedDay ?? '2ª');
 $nomePlano = trim((string) ($nomePlano ?? ''));
 $imagemPlano = trim((string) ($imagemPlano ?? ''));
+$planId = (int) ($planId ?? 0);
+$initialMealsByDay = isset($initialMealsByDay) && is_array($initialMealsByDay) ? $initialMealsByDay : [];
 $days = ['2ª', '3ª', '4ª', '5ª', '6ª', 'Sa', 'Do'];
 $selectedDayLabel = $selectedDay;
 $profileHref = !Yii::$app->user->isGuest ? Url::to('/' . Yii::$app->user->identity->username) : Url::to(['/perfil']);
@@ -56,37 +58,65 @@ $this->beginPage();
     <div class="main-layout">
         <div class="container py-4">
             <?php if (Yii::$app->session->hasFlash('Plan-success')): ?>
-                <div class="alert alert-success mb-3"><?= Html::encode(Yii::$app->session->getFlash('Plan-success')) ?></div>
+                <div class="alert alert-success mb-3 js-auto-dismiss-alert" data-auto-dismiss="1"><?= Html::encode(Yii::$app->session->getFlash('Plan-success')) ?></div>
             <?php endif; ?>
             <?php if (Yii::$app->session->hasFlash('Plan-error')): ?>
-                <div class="alert alert-danger mb-3"><?= Html::encode(Yii::$app->session->getFlash('Plan-error')) ?></div>
+                <div class="alert alert-danger mb-3 js-auto-dismiss-alert" data-auto-dismiss="1"><?= Html::encode(Yii::$app->session->getFlash('Plan-error')) ?></div>
             <?php endif; ?>
 
-            <div class="plano mb-4">
-                <h2 class="text-center mb-0">Criar plano Alimentar</h2>
-                <button type="submit" class="btn ms-5 criarPlano" aria-label="Guardar plano">
-                    <i class="bi bi-check-circle fs-3"></i>
-                </button>
-            </div>
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="plano mb-4 d-flex align-items-center justify-content-between">
+                        <h2 class="mb-0">Criar plano Alimentar</h2>
+                        <button type="submit" class="btn ms-5 criarPlano" aria-label="Guardar plano">
+                            <i class="bi bi-check-circle fs-3"></i>
+                        </button>
+                    </div>
 
-            <div class="text-center mb-3 selected-day-display">
-                <span class="badge text-bg-success px-3 py-2">Dia selecionado: <span id="selected-day-label"><?= Html::encode($selectedDayLabel) ?></span></span>
-            </div>
+                    <div class="text-center mb-3 selected-day-display">
+                        <span class="badge text-bg-success px-3 py-2">Dia selecionado: <span id="selected-day-label"><?= Html::encode($selectedDayLabel) ?></span></span>
+                    </div>
 
-            <input type="hidden" name="diaSelecionado" id="diaSelecionado" value="<?= Html::encode($selectedDay) ?>">
-            <input type="hidden" name="nomePlano" value="<?= Html::encode($nomePlano) ?>">
+                    <?php
+                    // Recuperar tags da sessão (da página anterior: criarplano.php)
+                    $sessionKey = 'plano_criacao';
+                    $sessionData = (array) Yii::$app->session->get($sessionKey, []);
+                    $planoTags = isset($sessionData['planoTags']) && is_array($sessionData['planoTags']) ? $sessionData['planoTags'] : [];
 
-            <div class="DiasSemana mb-5" id="days-selector">
-                <?php foreach ($days as $day): ?>
-                    <button type="button" class="dia<?= $day === $selectedDay ? ' diaSele' : '' ?>" data-day="<?= Html::encode($day) ?>"><?= Html::encode($day) ?></button>
-                <?php endforeach; ?>
-            </div>
+                    if (empty($planoTags) && isset($selectedTagIds) && is_array($selectedTagIds)) {
+                        $planoTags = array_map('intval', $selectedTagIds);
+                    }
 
-            <div class="row g-4 align-items-stretch" id="meal-list">
-                <div class="col-md-5 d-flex align-items-center justify-content-center meal-add-wrapper" id="add-meal-wrapper">
-                    <button type="button" class="btn adicionarRefeicao" id="add-meal" aria-label="Adicionar refeição">
-                        <i class="bi bi-plus-lg"></i>
-                    </button>
+                    // Se estiver a editar um plano existente, recuperar tags do objeto $plan
+                    if (isset($plan) && is_object($plan) && property_exists($plan, 'tags') && empty($planoTags)) {
+                        foreach ($plan->tags as $t) {
+                            $planoTags[] = (int) $t->id;
+                        }
+                    }
+                    ?>
+
+                    <input type="hidden" name="diaSelecionado" id="diaSelecionado" value="<?= Html::encode($selectedDay) ?>">
+                    <input type="hidden" name="nomePlano" value="<?= Html::encode($nomePlano) ?>">
+                    <input type="hidden" name="imagemPlano" value="<?= Html::encode($imagemPlano) ?>">
+                    <input type="hidden" name="planId" value="<?= (int) $planId ?>">
+
+                    <?php foreach ($planoTags as $tagId): ?>
+                        <input type="hidden" name="planoTags[]" value="<?= (int) $tagId ?>">
+                    <?php endforeach; ?>
+
+                    <div class="DiasSemana mb-5" id="days-selector">
+                        <?php foreach ($days as $day): ?>
+                            <button type="button" class="dia<?= $day === $selectedDay ? ' diaSele' : '' ?>" data-day="<?= Html::encode($day) ?>"><?= Html::encode($day) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <div class="row g-4 align-items-stretch" id="meal-list">
+                        <div class="col-md-5 d-flex align-items-center justify-content-center meal-add-wrapper" id="add-meal-wrapper">
+                            <button type="button" class="btn adicionarRefeicao" id="add-meal" aria-label="Adicionar refeição">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -109,6 +139,7 @@ $this->beginPage();
                         <textarea class="post-textarea" name="mealDescriptions[]" placeholder="Insira a descrição..."></textarea>
                         <input type="hidden" name="mealLabels[]" value="3º Refeição">
                         <input type="hidden" name="mealDays[]" value="">
+                        <input type="hidden" name="mealExistingImages[]" value="">
                     </div>
                 </div>
             </template>
@@ -117,8 +148,11 @@ $this->beginPage();
     <?= Html::endForm() ?>
 
     <?php
+    $this->registerJsVar('initialMealsByDay', $initialMealsByDay);
+
     $js = <<<'JS'
 (function () {
+    const initialMealsByDayData = (typeof initialMealsByDay === 'object' && initialMealsByDay) ? initialMealsByDay : {};
     const daysSelector = document.getElementById('days-selector');
     const selectedDayInput = document.getElementById('diaSelecionado');
     const selectedDayLabel = document.getElementById('selected-day-label');
@@ -220,6 +254,7 @@ $this->beginPage();
 
             const description = wrapper.querySelector('textarea[name="mealDescriptions[]"]');
             const label = wrapper.querySelector('input[name="mealLabels[]"]');
+            const existingImageInput = wrapper.querySelector('input[name="mealExistingImages[]"]');
             const fileInput = wrapper.querySelector('input[type="file"]');
             const previewImage = wrapper.querySelector('img');
 
@@ -227,6 +262,7 @@ $this->beginPage();
                 label: label ? label.value : '',
                 description: description ? description.value : '',
                 imageData: previewImage && previewImage.src ? previewImage.src : null,
+                imagePath: existingImageInput ? existingImageInput.value : '',
                 file: fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null,
             });
         });
@@ -280,6 +316,7 @@ $this->beginPage();
             if (restoreMeal && mealData) {
                 const description = newWrapper.querySelector('textarea[name="mealDescriptions[]"]');
                 const label = newWrapper.querySelector('input[name="mealLabels[]"]');
+                const existingImageInput = newWrapper.querySelector('input[name="mealExistingImages[]"]');
                 const previewImage = newWrapper.querySelector('img');
                 const uploadArea = newWrapper.querySelector('[data-upload-area]');
 
@@ -288,6 +325,9 @@ $this->beginPage();
                 }
                 if (label) {
                     label.value = mealData.label || '';
+                }
+                if (existingImageInput) {
+                    existingImageInput.value = mealData.imagePath || '';
                 }
                 if (previewImage && mealData.imageData) {
                     previewImage.src = mealData.imageData;
@@ -349,6 +389,23 @@ $this->beginPage();
 
     // Inicializar
     const initialDay = selectedDayInput.value || '2ª';
+    Object.keys(initialMealsByDayData).forEach(function (dayKey) {
+        const day = normalizeDay(dayKey);
+        const meals = Array.isArray(initialMealsByDayData[dayKey]) ? initialMealsByDayData[dayKey] : [];
+
+        mealsByDay[day] = meals.map(function (meal) {
+            const imagePath = meal && meal.imagePath ? String(meal.imagePath) : '';
+            const imageUrl = meal && meal.imageUrl ? String(meal.imageUrl) : '';
+            return {
+                label: meal && meal.label ? String(meal.label) : '',
+                description: meal && meal.description ? String(meal.description) : '',
+                imageData: imageUrl,
+                imagePath: imagePath,
+                file: null,
+            };
+        });
+    });
+
     loadMealsForDay(initialDay);
 
     if (addButton) {
@@ -388,6 +445,7 @@ $this->beginPage();
                     const description = fragment.querySelector('textarea[name="mealDescriptions[]"]');
                     const label = fragment.querySelector('input[name="mealLabels[]"]');
                     const mealDayInput = fragment.querySelector('input[name="mealDays[]"]');
+                    const existingImageInput = fragment.querySelector('input[name="mealExistingImages[]"]');
                     const fileInput = fragment.querySelector('input[type="file"]');
 
                     if (description) {
@@ -398,6 +456,9 @@ $this->beginPage();
                     }
                     if (mealDayInput) {
                         mealDayInput.value = day;
+                    }
+                    if (existingImageInput) {
+                        existingImageInput.value = mealData.imagePath || '';
                     }
 
                     // Se há um ficheiro, recrear na DataTransfer
@@ -421,6 +482,17 @@ $this->beginPage();
             syncMealsToForm();
         });
     }
+
+    document.querySelectorAll('.js-auto-dismiss-alert[data-auto-dismiss="1"]').forEach(function (alertNode) {
+        window.setTimeout(function () {
+            if (window.bootstrap && window.bootstrap.Alert) {
+                window.bootstrap.Alert.getOrCreateInstance(alertNode).close();
+                return;
+            }
+
+            alertNode.remove();
+        }, 2000);
+    });
 })();
 JS;
 

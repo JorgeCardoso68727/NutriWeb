@@ -26,37 +26,73 @@ $this->beginPage();
     <?php $this->beginBody() ?>
 
     <div class="main-layout">
-        <div class="container" style="max-width: 500px;">
-            <h2 class="text-center mb-5 mt-5">Criar plano Alimentar</h2>
+        <div class="container create-plan-shell py-5">
+            <div class="create-plan-header text-center mb-4 mb-lg-5">
+                <h2 class="mb-2 mt-2">Criar plano alimentar</h2>
+                <p class="text-muted mb-0">Organiza o plano e escolhe as características na barra lateral.</p>
+            </div>
 
             <?= Html::beginForm(['/plan/criar-plano-semanal'], 'post', ['enctype' => 'multipart/form-data', 'id' => 'plano-inicial-form']) ?>
-            <div class="mb-4">
-                <label for="nomePlano" class="form-label fw-bold small">Insira o nome do Plano Nutricional</label><br>
-                <input type="text" id="nomePlano" name="nomePlano" class="texto">
-            </div>
+            <div class="row g-4 align-items-start">
+                <div class="col-12 col-lg-7">
 
-            <div class="mb-4">
-                <label class="form-label fw-bold small">Insira a Imagem do Plano Nutricional</label>
+                    <div class="mb-4">
+                        <label for="nomePlano" class="form-label fw-bold small text-uppercase letter-spaced">Nome do plano</label>
+                        <input type="text" id="nomePlano" name="nomePlano" class="texto" placeholder="Ex: Plano para perda de gordura">
+                    </div>
 
-                <div>
-                    <input type="file" id="planoImagem" name="planoImagem" hidden accept="image/*">
-                    <label class="upload-area" for="planoImagem">
-                        <i class="bi bi-plus-lg"></i>
-                        <img src="" alt="Preview da imagem do plano" hidden>
-                    </label>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase letter-spaced">Imagem de capa</label>
+
+                        <div>
+                            <input type="file" id="planoImagem" name="planoImagem" hidden accept="image/*">
+                            <label class="upload-area" for="planoImagem">
+                                <i class="bi bi-plus-lg"></i>
+                                <img src="" alt="Preview da imagem do plano" hidden>
+                                <span class="upload-area-hint">Adicionar imagem</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <button type="submit" class="btn btnSeguinte w-100">
+                            Criar plano
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="text-center">
-                <button type="submit" class="btn btnSeguinte">
-                    Seguinte
-                </button>
+
+                <div class="col-12 col-lg-5">
+                    <!-- Secção de Tags do Plano -->
+                    <div class="tags-sidebar">
+                        <div class="tags-sidebar-header">
+                            <span class="tags-sidebar-badge">Tags</span>
+                            <h3>Características do plano</h3>
+                            <p>Seleciona os filtros que melhor descrevem o teu plano alimentar.</p>
+                        </div>
+
+                        <div class="tags-container" id="tagsContainer">
+                            <?php
+                            $tags = \app\models\RecipeTag::find()->orderBy(['name' => SORT_ASC])->all();
+                            foreach ($tags as $tag):
+                            ?>
+                                <label class="tag-pill" for="tag_<?= $tag->id ?>">
+                                    <input class="tag-pill-input" type="checkbox" name="planoTags[]"
+                                        value="<?= $tag->id ?>" id="tag_<?= $tag->id ?>">
+                                    <span class="tag-pill-content">
+                                        <strong><?= Html::encode($tag->name) ?></strong>
+                                        <small><?= Html::encode($tag->description) ?></small>
+                                    </span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
             <?= Html::endForm() ?>
         </div>
-    </div>
 
-    <?php
-    $js = <<<'JS'
+        <?php
+        $js = <<<'JS'
 (function () {
     const fileInput = document.getElementById('planoImagem');
     const previewImage = document.querySelector('.upload-area img');
@@ -90,10 +126,10 @@ $this->beginPage();
 })();
 JS;
 
-    $this->registerJs($js, \yii\web\View::POS_END);
-    ?>
+        $this->registerJs($js, \yii\web\View::POS_END);
+        ?>
 
-    <?php $this->endBody() ?>
+        <?php $this->endBody() ?>
 </body>
 
 </html>

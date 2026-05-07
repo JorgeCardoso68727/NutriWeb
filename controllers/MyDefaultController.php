@@ -227,11 +227,13 @@ class MyDefaultController extends Controller
 
         $user = $this->module->model("User", ["scenario" => "register"]);
         $profile = $this->module->model("Profile");
+        $showVerificationModal = false;
 
         // load post data
         $post = Yii::$app->request->post();
         $userLoaded = $user->load($post);
         $profileLoaded = $profile->load($post);
+        $registerStep = Yii::$app->request->post('register_step', 'send_code');
 
         if ($userLoaded || $profileLoaded) {
             // validate for ajax request
@@ -242,41 +244,151 @@ class MyDefaultController extends Controller
 
             // validate for normal request
             if ($user->validate() && $profile->validate()) {
-                $role = $this->module->model("Role");
+                if ($registerStep === 'verify_code') {
+                    $pendingRegistration = Yii::$app->session->get('pending_registration');
+                    $postedCode = trim((string) Yii::$app->request->post('email_verification_code', ''));
 
-                // save user first
-                if ($user->setRegisterAttributes($role::ROLE_USER, $user::STATUS_ACTIVE)->save()) {
-                    // bind profile to created user
-                    $profile->setUser($user->id);
-
-                    if ($profile->save()) {
-                        // $this->afterRegister($user);  // TODO: ativar quando mailer estiver configurado
-
-                        // Email confirmation is disabled for now, so log in immediately.
-                        //Yii::$app->user->login($user, $this->module->loginDuration);
-
-                        // set success flash
-                        $successText = Yii::t(
-                            "user",
-                            "Successfully registered [ {displayName} ]",
-                            ["displayName" => $user->getDisplayName()]
-                        );
-                        $guestText = "";
-                        if (Yii::$app->user->isGuest) {
-                            $guestText = Yii::t("user", " - Utilizador registado com sucesso");
-                        }
-                        Yii::$app->session->setFlash("Register-success", $successText . $guestText);
-                        return $this->redirect(["/user/login"]);
+                    if (!$pendingRegistration) {
+                        Yii::$app->session->setFlash('Register-modal-error', 'A verificacao expirou. Peca um novo codigo.');
+                        $showVerificationModal = true;
+                    } elseif (time() > (int) ($pendingRegistration['expiresAt'] ?? 0)) {
+                        Yii::$app->session->remove('pending_registration');
+                        Yii::$app->session->setFlash('Register-modal-error', 'O codigo expirou. Peca um novo codigo.');
+                        $showVerificationModal = true;
+                    } elseif ($postedCode !== (string) ($pendingRegistration['code'] ?? '')) {
+                        Yii::$app->session->setFlash('Register-modal-error', 'Codigo invalido. Tenta novamente.');
+                        $showVerificationModal = true;
                     } else {
-                        Yii::$app->session->setFlash("Register-error", json_encode($profile->getErrors()));
+                        $saveResult = $this->savePendingRegistration($pendingRegistration);
+                        $saved = $saveResult['success'];
+                        if ($saved) {
+                            Yii::$app->session->remove('pending_registration');
+                            return $this->redirect(["/user/login"]);
+                        }
+
+                        Yii::$app->session->setFlash('Register-modal-error', $saveResult['message']);
+                        $showVerificationModal = true;
                     }
                 } else {
-                    Yii::$app->session->setFlash("Register-error", json_encode($user->getErrors()));
+                    $verificationCode = (string) random_int(100000, 999999);
+                    $userPost = (array) Yii::$app->request->post($user->formName(), []);
+                    $pendingRegistration = [
+                        'user' => [
+                            'username' => $user->username,
+                            'email' => $user->email,
+                            'newPassword' => $userPost['newPassword'] ?? null,
+                            'newPasswordConfirm' => $userPost['newPasswordConfirm'] ?? null,
+                        ],
+                        'profile' => $profile->getAttributes(['Frist_Name', 'Last_Name', 'Telefone']),
+                        'code' => $verificationCode,
+                        'expiresAt' => time() + (10 * 60),
+                    ];
+
+                    if ($this->sendRegisterVerificationCode($user->email, $user->username, $verificationCode)) {
+                        Yii::$app->session->set('pending_registration', $pendingRegistration);
+                        $showVerificationModal = true;
+                    } else {
+                        Yii::$app->session->setFlash('Register-error', 'Nao conseguimos enviar o codigo de verificacao. Tenta novamente.');
+                    }
                 }
             }
         }
 
-        return $this->render("register", compact("user", "profile"));
+        return $this->render("register", compact("user", "profile", "showVerificationModal"));
+    }
+
+    /**
+     * Send registration verification code to the provided email.
+     */
+    protected function sendRegisterVerificationCode($email, $username, $code)
+    {
+        $subject = 'NutriWeb - Codigo de verificacao de registo';
+
+        return Yii::$app->mailer
+            ->compose('registerVerificationCode', [
+                'subject' => $subject,
+                'username' => $username,
+                'code' => $code,
+            ])
+            ->setTo($email)
+            ->setSubject($subject)
+            ->send();
+    }
+
+    /**
+     * Persist pending registration data after successful code verification.
+     */
+    protected function savePendingRegistration(array $pendingRegistration)
+    {
+        $userData = $pendingRegistration['user'] ?? [];
+        $profileData = $pendingRegistration['profile'] ?? [];
+
+        $user = $this->module->model('User', ['scenario' => 'register']);
+        $profile = $this->module->model('Profile');
+
+        $user->setAttributes($userData, false);
+        $user->newPassword = $userData['newPassword'] ?? null;
+        $user->newPasswordConfirm = $userData['newPasswordConfirm'] ?? null;
+        $profile->setAttributes($profileData, false);
+
+        if (!$user->validate() || !$profile->validate()) {
+            return [
+                'success' => false,
+                'message' => $this->formatModelErrors($user, $profile),
+            ];
+        }
+
+        $role = $this->module->model('Role');
+        if (!$user->setRegisterAttributes($role::ROLE_USER, $user::STATUS_ACTIVE)->save()) {
+            return [
+                'success' => false,
+                'message' => $this->formatModelErrors($user),
+            ];
+        }
+
+        $profile->setUser($user->id);
+        if (!$profile->save()) {
+            return [
+                'success' => false,
+                'message' => $this->formatModelErrors($profile),
+            ];
+        }
+
+        $successText = Yii::t(
+            'user',
+            'Successfully registered [ {displayName} ]',
+            ['displayName' => $user->getDisplayName()]
+        );
+        $guestText = '';
+        if (Yii::$app->user->isGuest) {
+            $guestText = Yii::t('user', ' - Utilizador registado com sucesso');
+        }
+        Yii::$app->session->setFlash('Register-success', $successText . $guestText);
+
+        return [
+            'success' => true,
+            'message' => '',
+        ];
+    }
+
+    /**
+     * Format validation errors for display in the verification modal.
+     */
+    protected function formatModelErrors(...$models)
+    {
+        $messages = [];
+        foreach ($models as $model) {
+            if (!$model) {
+                continue;
+            }
+            foreach ($model->getErrors() as $errors) {
+                foreach ($errors as $error) {
+                    $messages[] = $error;
+                }
+            }
+        }
+
+        return $messages ? implode(' ', array_unique($messages)) : 'Nao foi possivel finalizar o registo. Confere os dados e tenta outra vez.';
     }
 
     /**

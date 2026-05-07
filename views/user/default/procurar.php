@@ -10,8 +10,8 @@ $this->title = 'Nutriweb - Procurar';
 
 <div class="search-page">
     <div class="search-header">
-        <h4>Procurar utilizadores e posts</h4>
-        <p>Escreve um nome, username, titulo ou palavra-chave.</p>
+        <h4>Procurar utilizadores, posts e eventos</h4>
+        <p>Escreve um nome, username, título, palavra-chave ou local.</p>
     </div>
 
     <div class="search-form-card">
@@ -37,7 +37,7 @@ $this->title = 'Nutriweb - Procurar';
                 Resultado para <strong><?= Html::encode($term) ?></strong>
             </span>
             <span>
-                <?= Html::encode((string) count($users)) ?> utilizadores • <?= Html::encode((string) count($posts)) ?> posts
+                <?= Html::encode((string) count($users)) ?> utilizadores • <?= Html::encode((string) count($posts)) ?> posts • <?= Html::encode((string) count($events)) ?> eventos
             </span>
         </div>
 
@@ -108,6 +108,45 @@ $this->title = 'Nutriweb - Procurar';
                             <div>
                                 <h6><?= Html::encode((string) ($post['titulo'] ?? 'Sem titulo')) ?></h6>
                                 <p>por <?= Html::encode($displayName) ?></p>
+                                <?php if ($preview !== ''): ?>
+                                    <small><?= Html::encode($preview) ?></small>
+                                <?php endif; ?>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </section>
+
+            <section class="result-section">
+                <h5>Eventos</h5>
+
+                <?php if (empty($events)): ?>
+                    <div class="empty-card">Nenhum evento encontrado.</div>
+                <?php else: ?>
+                    <?php foreach ($events as $event): ?>
+                        <?php
+                        $imagePath = trim((string) ($event['image'] ?? ''));
+                        $imageUrl = $imagePath !== ''
+                            ? Url::to('@web/' . ltrim($imagePath, '/'))
+                            : Url::to('@web/Img/Pato-Com-Arroz-bolohesa.png');
+
+                        $title = trim((string) ($event['title'] ?? 'Sem título'));
+                        $startDate = trim((string) ($event['start_date'] ?? ''));
+                        $location = trim((string) ($event['location'] ?? ''));
+                        $creator = trim((string) ($event['creator_username'] ?? ''));
+                        $eventUrl = Url::to(['/event/view', 'id' => (int) ($event['id'] ?? 0)]);
+                        $preview = mb_substr(trim((string) ($event['description'] ?? '')), 0, 120);
+                        if (mb_strlen((string) ($event['description'] ?? '')) > 120) {
+                            $preview .= '...';
+                        }
+                        ?>
+                        <a class="result-card event-card" href="<?= Html::encode($eventUrl) ?>">
+                            <div>
+                                <h6><?= Html::encode($title) ?></h6>
+                                <p>por <?= Html::encode($creator !== '' ? $creator : 'Organizador') ?></p>
+                                <?php if ($startDate !== ''): ?>
+                                    <small><?= Html::encode($startDate) ?><?= $location !== '' ? ' • ' . Html::encode($location) : '' ?></small>
+                                <?php endif; ?>
                                 <?php if ($preview !== ''): ?>
                                     <small><?= Html::encode($preview) ?></small>
                                 <?php endif; ?>

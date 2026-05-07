@@ -18,7 +18,7 @@ class Denuncia extends ActiveRecord
     {
         return [
             [['target_user_id', 'motivo'], 'required'],
-            [['target_user_id', 'autor_id', 'target_post_id'], 'integer'],
+            [['target_user_id', 'autor_id', 'target_post_id', 'target_event_id'], 'integer'],
             [['descricao'], 'string'],
             [['data_denuncia'], 'safe'],
             [['target_type', 'estado_revisao'], 'string', 'max' => 20],
